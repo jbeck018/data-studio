@@ -10,6 +10,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@remix-run/css-bundle": "^2.15.0",
     "@remix-run/express": "^2.15.0",
     "@remix-run/node": "^2.15.0",
@@ -18,14 +19,17 @@
     "@tanstack/react-query": "^5.61.3",
     "@tanstack/react-query-devtools": "^5.61.3",
     "@tanstack/react-table": "^8.20.5",
+    "@types/lodash-es": "^4.17.12",
     "@typescript-eslint/parser": "^8.16.0",
+    "clsx": "^2.1.1",
     "express": "^4.21.1",
     "isbot": "^5.1.17",
+    "lodash-es": "^4.17.21",
     "pg": "^8.13.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sql-formatter": "^12.2.4",
-    "ws": "^8.18.0"
+    "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
     "@remix-run/dev": "^2.15.0",
@@ -33,7 +37,6 @@
     "@types/pg": "^8.11.10",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@types/ws": "^8.5.13",
     "@typescript-eslint/eslint-plugin": "^8.16.0",
     "eslint": "^9.15.0",
     "eslint-config-prettier": "^9.1.0",

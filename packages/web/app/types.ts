@@ -1,25 +1,20 @@
 export interface TableSchema {
   name: string;
-  columns: ColumnSchema[];
+  columns: Column[];
   primaryKey?: string[];
-  foreignKeys?: ForeignKeyConstraint[];
+  rowCount: number;
+  sizeInBytes: number;
 }
 
-export interface ColumnSchema {
+export interface Column {
   name: string;
   type: string;
   nullable: boolean;
   defaultValue?: string;
 }
 
-export interface ForeignKeyConstraint {
-  columns: string[];
-  referencedTable: string;
-  referencedColumns: string[];
-}
-
 export interface QueryResult {
-  rows: any[];
+  rows: Record<string, any>[];
   fields: {
     name: string;
     dataTypeID: number;
@@ -27,31 +22,8 @@ export interface QueryResult {
 }
 
 export interface TableDataResponse {
-  data: any[];
+  data: Record<string, any>[];
   totalRows: number;
-  page: number;
-  pageSize: number;
-}
-
-export interface QueryRequest {
-  sql: string;
-  params?: any[];
-}
-
-export interface Schema {
-  tableName: string;
-  columns: Column[];
-  primaryKey?: PrimaryKey;
-}
-
-export interface Column {
-  name: string;
-  type: string;
-  nullable: boolean;
-  default?: string;
-}
-
-export interface PrimaryKey {
-  column: string;
-  value: string | number;
+  page?: number;
+  pageSize?: number;
 }

@@ -1,168 +1,90 @@
 # Drizzle-like Database Management Studio
 
 ## Context
-'''Context: We are building a SaaS that can be used via npm for Javascript projects. You are a Principle Engineer with experience in multiple disciplines, and you are responsible for the implementation of the Application. '''
+The project is a web-based database management studio similar to Data Studio, providing a modern interface for database operations and management.
 
-## Project Overview
-The project is a database management studio similar to Data Studio, providing:
-1. Database introspection capabilities
-2. Type-safe database client generation
-3. Web-based UI for database management
-4. Reusable UI components for integration in other applications
+## Current Status
+### Completed Features
+1. Basic project structure and setup
+   - Express server with Remix frontend
+   - TypeScript configuration
+   - WebSocket communication layer
+   - Dark mode support
 
-## Technical Stack
-- Backend:
-  - Node.js/Express for the server
-  - TypeScript for type safety
-  - PostgreSQL as the initial supported database
-  - Drizzle ORM for database operations
-- Frontend:
-  - Remix for the web application
-  - React for UI components
-  - TailwindCSS for styling
-  - Tanstack Suite:
-    - Tanstack Query for data fetching
-    - Tanstack Table for data grids
-    - Tanstack Router for client-side routing
-    - Tanstack Form for form handling
-  - Zod for runtime type validation
+2. UI Components
+   - Side navigation with Tables and Query pages
+   - Dark/Light theme toggle
+   - SQL query editor with formatting
+   - Table structure viewer and editor with tab interface
 
-## Implementation Phases
+3. Database Operations
+   - Basic database connection and pooling
+   - Table listing functionality
+   - SQL query execution
+   - Query results display
+   - Table structure viewing and editing
+   - Column management (add, remove, modify)
+   - Primary key management
 
-### Phase 1: Core Infrastructure
-1. Set up project structure
-   - Create monorepo setup with pnpm workspaces
-   - Set up packages for server, client, and UI components
-   - Configure TypeScript, ESLint, and Prettier
+### Remaining Work
 
-2. Database Connection Layer
-   - Implement database connection management
-   - Create connection pooling
-   - Add support for connection string parsing
-   - Implement basic security measures
+#### 1. Core Features
+- [x] Add table structure viewing and editing
+- [ ] Implement data editing capabilities in table view
+- [ ] Add support for complex filtering, sorting, and pagination
+- [ ] Add support for saved queries
+- [ ] Implement query history
+- [ ] Add export functionality for query results
+- [ ] Create exportable UI that can be implemented in other projects
+- [ ] Add support for a query client that can be implemented in other projects similar to the supabase-js client: https://github.com/supabase/supabase-js
+- [ ] Create build pipelines for CI/CD in github to deploy the packages to npm.
 
-3. Database Introspection
-   - Create schema introspection logic
-   - Extract table definitions
-   - Map PostgreSQL types to TypeScript types
-   - Generate type definitions
+#### 2. UI Enhancements
+- [ ] Add loading states for all operations
+- [ ] Improve error handling and error messages
+- [ ] Add syntax highlighting for SQL editor
+- [ ] Implement auto-complete for SQL queries
+- [ ] Add responsive design for mobile devices
+- [ ] Add the ability to create visualizations of query results and tables
 
-### Phase 2: API Development
-1. Core API Endpoints
-   - Database connection management
-   - Schema introspection
-   - Table operations (CRUD)
-   - Query execution
+#### 3. Database Features
+- [ ] Add support for multiple database connections
+- [ ] Implement connection management UI
+- [ ] Add database schema visualization
+- [ ] Support for stored procedures and functions
+- [ ] Add database backup/restore functionality
 
-2. Type-safe Client Generation
-   - Generate TypeScript interfaces
-   - Create query builder
-   - Implement type-safe mutations
-   - Add validation layer
+#### 4. Security & Performance
+- [ ] Implement proper SQL injection prevention
+- [ ] Add query execution time limits
+- [ ] Implement result set pagination
+- [ ] Add user authentication and authorization
+- [ ] Implement connection pooling optimizations
 
-### Phase 3: Web UI Development
-1. Core UI Framework
-   - Set up Remix application
-   - Implement authentication system
-   - Create base layout and navigation
-   - Configure Tanstack Query for server state management
+#### 5. Testing & Documentation
+- [ ] Add unit tests for core functionality
+- [ ] Implement integration tests
+- [ ] Add end-to-end tests
+- [ ] Create user documentation
+- [ ] Add API documentation
 
-2. Database Management Interface
-   - Connection management UI
-   - Schema browser with Tanstack Table
-   - Table viewer and editor using Tanstack Table
-   - Query interface with syntax highlighting
-   - Forms powered by Tanstack Form
+#### 6. Developer Experience
+- [ ] Improve development setup instructions
+- [ ] Add contribution guidelines
+- [ ] Implement proper logging system
+- [ ] Add development tools and utilities
+- [ ] Create example projects and use cases
 
-3. Data Visualization
-   - Table data display with Tanstack Table (sorting, filtering, pagination)
-   - Relationship visualization
-   - Query results display using Tanstack Table
-   - Export functionality
+## Next Steps
+1. ~~Prioritize table structure viewing and editing~~ (Completed)
+2. Implement data editing capabilities
+3. Add syntax highlighting and auto-complete for better query writing experience
+4. Improve error handling and add proper loading states
+5. Begin work on authentication system
 
-### Phase 4: Reusable Components
-1. Component Library
-   - Table component
-   - Query builder component
-   - Schema viewer component
-   - Results viewer component
-
-2. Integration Utilities
-   - React hooks for data fetching
-   - Context providers
-   - Type definitions
-   - Documentation
-
-## MVP Features
-1. Database Connection
-   - Connect to PostgreSQL database
-   - Manage multiple connections
-   - Connection status monitoring
-
-2. Schema Management
-   - View database schema
-   - Browse tables and relationships
-   - View indexes and constraints
-
-3. Data Operations
-   - View table contents
-   - Basic CRUD operations
-   - Execute custom SQL queries
-   - View query results
-
-4. User Interface
-   - Clean, modern design
-   - Responsive layout
-   - Dark/light mode support
-   - Basic error handling
-
-## Future Enhancements
-1. Additional Database Support
-   - MySQL/MariaDB
-   - SQLite
-   - SQL Server
-
-2. Advanced Features
-   - Query history
-   - Saved queries
-   - Data import/export
-   - Schema comparison
-   - Migration management
-
-3. Performance Optimizations
-   - Query optimization
-   - Connection pooling
-   - Caching layer
-   - Batch operations
-
-## Development Guidelines
-1. Code Quality
-   - TypeScript for all code
-   - Comprehensive testing
-   - Documentation
-   - Code review process
-
-2. Security
-   - Input validation
-   - Query sanitization
-   - Authentication/Authorization
-   - Secure connection handling
-
-3. Performance
-   - Lazy loading
-   - Connection pooling
-   - Efficient data fetching
-   - Optimized rendering
-
-## Deployment
-1. Package Distribution
-   - npm package publishing
-   - Version management
-   - Release notes
-   - Migration guides
-
-2. Documentation
-   - Installation guide
-   - API documentation
-   - Component documentation
-   - Example implementations
+## Technical Considerations
+- Ensure proper type safety throughout the application
+- Maintain consistent error handling patterns
+- Keep the UI responsive and user-friendly
+- Follow security best practices for database operations
+- Maintain backward compatibility for API changes

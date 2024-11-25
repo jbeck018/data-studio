@@ -1,7 +1,7 @@
 import { pool } from "./pool.server";
-import type { Schema } from "~/types";
+import type { TableSchema } from "~/types";
 
-export async function getTableSchema(tableName: string): Promise<Schema> {
+export async function getTableSchema(tableName: string): Promise<TableSchema> {
   const client = await pool.connect();
   try {
     const columnsQuery = `
@@ -34,13 +34,17 @@ export async function getTableSchema(tableName: string): Promise<Schema> {
       name: row.column_name,
       type: row.data_type,
       nullable: row.is_nullable === "YES",
-      default: row.column_default,
-      isPrimaryKey: row.is_primary_key,
+      defaultValue: row.column_default,
     }));
 
+    const primaryKey = rows
+      .filter(row => row.is_primary_key)
+      .map(row => row.column_name);
+
     return {
-      tableName,
+      name: tableName,
       columns,
+      primaryKey: primaryKey.length > 0 ? primaryKey : undefined,
     };
   } finally {
     client.release();

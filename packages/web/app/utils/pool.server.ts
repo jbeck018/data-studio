@@ -1,9 +1,16 @@
-import { Pool } from 'pg';
+import pg from 'pg';
+const { Pool } = pg;
 
 export const pool = new Pool({
-  user: process.env.POSTGRES_USER || 'postgres',
-  host: process.env.POSTGRES_HOST || 'localhost',
-  database: process.env.POSTGRES_DB || 'postgres',
-  password: process.env.POSTGRES_PASSWORD || 'postgres',
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
+  user: process.env.PGUSER || 'postgres',
+  host: process.env.PGHOST || 'localhost',
+  database: process.env.PGDATABASE || 'graphql',
+  password: process.env.PGPASSWORD || 'postgres',
+  port: parseInt(process.env.PGPORT || '5432'),
+});
+
+// Add error handler
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+  process.exit(-1);
 });

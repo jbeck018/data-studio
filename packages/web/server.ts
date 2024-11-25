@@ -1,13 +1,13 @@
+import type { RequestHandler } from "@remix-run/express";
 import { createRequestHandler } from "@remix-run/express";
 import { broadcastDevReady, installGlobals } from "@remix-run/node";
 import express from "express";
 import { Server } from "http";
-import { initWebSocketServer } from "./app/utils/ws.server";
 import type { ViteDevServer } from "vite";
 
 installGlobals();
 
-async function startServer() {
+async function startServer(): Promise<void> {
   try {
     let viteDevServer: ViteDevServer | undefined;
     
@@ -21,51 +21,64 @@ async function startServer() {
     const app = express();
     const httpServer = new Server(app);
 
-    // Initialize WebSocket server
-    initWebSocketServer(httpServer);
-
     // Handle Remix requests
     if (viteDevServer) {
       app.use(viteDevServer.middlewares);
     } else {
-      app.use(express.static("public"));
+      app.use(express.static("public", {
+        maxAge: '1h',
+      }));
     }
 
-    app.all(
-      "*",
-      createRequestHandler({
-        build: viteDevServer
-          ? () => viteDevServer.ssrLoadModule("virtual:remix/server-build")
-          : await import("./build/server/index.js"),
-      })
-    );
+    const build = viteDevServer
+      ? async () => {
+          const build = await viteDevServer!.ssrLoadModule("virtual:remix/server-build");
+          return build;
+        }
+      : async () => {
+          const build = await import("./build/index.js");
+          return build;
+        };
 
-    const port = process.env.PORT || 3000;
-    
-    httpServer.listen(port, async () => {
-      if (process.env.NODE_ENV === "development") {
-        const build = await import("@remix-run/dev/server-build");
-        broadcastDevReady(build);
-      }
-      console.log(`Express server listening on port ${port}`);
+    const handler: RequestHandler = createRequestHandler({
+      build: build as any,
+      mode: process.env.NODE_ENV,
     });
 
-    // Handle server shutdown
-    const signals = ["SIGTERM", "SIGINT"] as const;
-    signals.forEach((signal) => {
-      process.on(signal, () => {
-        console.log(`Received ${signal}, shutting down...`);
-        httpServer.close(() => {
-          viteDevServer?.close();
-          process.exit(0);
-        });
+    app.all("*", handler);
+
+    const port = process.env.PORT || 3000;
+    await new Promise<void>((resolve) => {
+      httpServer.listen(port, () => {
+        console.log(`Express server listening on port ${port}`);
+        resolve();
       });
     });
 
+    if (process.env.NODE_ENV === "development") {
+      const b = await build();
+      broadcastDevReady(b as any);
+    }
+
+    // Graceful shutdown
+    const shutdown = async () => {
+      console.log('SIGTERM signal received: closing HTTP server');
+      await new Promise<void>((resolve) => {
+        httpServer.close(() => {
+          console.log('HTTP server closed');
+          resolve();
+        });
+      });
+      process.exit(0);
+    };
+
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+
   } catch (error) {
-    console.error("Failed to start server:", error);
+    console.error('Failed to start server:', error instanceof Error ? error.message : error);
     process.exit(1);
   }
 }
 
-startServer();
+void startServer();
