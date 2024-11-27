@@ -1,0 +1,91 @@
+version: 1
+project:
+  name: drizzle-server
+  description: Server implementation using Drizzle ORM
+
+# Package manager configuration
+package_manager:
+  type: pnpm
+  version_file: package.json
+  lockfile: pnpm-lock.yaml
+
+# Code style and formatting
+style:
+  typescript:
+    indent: 2
+    quotes: single
+    semi: true
+  prettier:
+    enabled: true
+    config_file: .prettierrc
+
+# Testing configuration
+testing:
+  framework: vitest
+  coverage:
+    enabled: true
+    threshold: 80
+
+# Dependencies
+dependencies:
+  production:
+    - drizzle-orm
+    - drizzle-kit
+    - postgres
+    - express
+  development:
+    - typescript
+    - "@types/node"
+    - "@types/express"
+    - vitest
+    - prettier
+    - eslint
+
+# Database configuration
+database:
+  type: postgres
+  migrations:
+    directory: drizzle
+    pattern: "*.sql"
+
+# Security
+security:
+  env_file: .env
+  secrets_management: true
+  required_env_vars:
+    - DATABASE_URL
+    - PORT
+
+# AI assistant preferences
+ai_assistant:
+  code_organization:
+    src_directory: src
+    test_directory: tests
+    config_directory: config
+  best_practices:
+    - Use TypeScript for type safety
+    - Follow REST API best practices
+    - Implement proper error handling
+    - Use environment variables for configuration
+    - Write comprehensive tests
+    - Document API endpoints
+    - Use proper logging
+  file_structure:
+    - src/
+    - src/api/
+    - src/db/
+    - src/middleware/
+    - src/types/
+    - src/utils/
+    - tests/
+    - drizzle/
+    - config/
+
+# Git practices
+git:
+  conventional_commits: true
+  branch_naming:
+    pattern: "(feature|bugfix|hotfix|chore)/*"
+  protected_branches:
+    - main
+    - develop

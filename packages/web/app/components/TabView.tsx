@@ -1,5 +1,5 @@
-import { ReactNode } from "react";
 import { startCase } from "lodash-es";
+import { cn } from "~/utils/cn";
 
 interface Tab {
   id: string;
@@ -27,19 +27,20 @@ interface DataViewProps {
 
 export function TabView({ tabs, activeTab, onTabChange }: TabViewProps) {
   return (
-    <div className="flex flex-col bg-white dark:bg-gray-900">
-      <div className="flex border-b border-gray-200 dark:border-gray-700">
+    <div className="bg-light-bg-primary dark:bg-dark-bg-secondary px-6">
+      <div className="flex">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`px-6 py-3 text-sm font-medium border-b-2 -mb-px ${
+              className={cn(
+                "px-6 py-3 text-sm font-medium border-b-2",
                 isActive
-                  ? "border-purple-500 text-purple-600 dark:text-purple-400"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
-              }`}
+                  ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                  : "border-transparent text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary hover:border-light-border dark:hover:text-dark-text-primary dark:hover:border-dark-border"
+              )}
             >
               {tab.label}
             </button>

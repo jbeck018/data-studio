@@ -1,219 +1,248 @@
-import { json, type LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useSearchParams, useSubmit } from "@remix-run/react";
-import { fetchTableData, fetchSchema, updateTableSchema, createTableRow } from "~/utils/api";
-import type { TableSchema, TableDataResponse } from "~/types";
-import { useState } from "react";
-import { DataView } from "~/components/DataView";
-import { StructureView } from "~/components/StructureView";
+import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import { useLoaderData, useSearchParams } from "@remix-run/react";
 import { TabView } from "~/components/TabView";
-import { Button } from "~/components/Button";
-import { CreateRowModal } from "~/components/CreateRowModal";
-import { PageContainer } from "~/components/PageContainer";
+import { DataView } from "~/components/DataView";
+import { EmptyState } from "~/components/EmptyState";
+import { RowDetailsSidebar } from "~/components/RowDetailsSidebar";
+import { useCallback, useState } from "react";
+import { isNumber, startCase } from "lodash-es";
+import { useClient } from "~/hooks/useClient";
+import type { TableDataResponse, Column } from "~/types";
+import { fetchTableData } from "~/utils/api.server";
+import { fetchSchema } from "~/utils/api.server";
+
+interface LoaderData {
+  tableName: string;
+  data: {
+    data: Record<string, unknown>[];
+    totalRows: number;
+    page?: number;
+    pageSize?: number;
+  };
+  columns: Column[];
+}
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
+  const tableName = params.tableName;
+  if (!tableName) {
+    throw new Error("Table name is required");
+  }
+
   const url = new URL(request.url);
   const sortBy = url.searchParams.get("sortBy") || undefined;
   const sortOrder = url.searchParams.get("sortOrder") as "asc" | "desc" | undefined;
-  const activeTab = url.searchParams.get("tab") || "data";
-  const showCreateModal = url.searchParams.get("showCreateModal") === "true";
 
-  const tableName = params.tableName;
-  if (!tableName) {
-    throw new Response("Table name is required", { status: 400 });
+  const data = await fetchTableData(tableName, sortBy, sortOrder);
+  const schema = await fetchSchema();
+  const tableSchema = schema.find(t => t.name === tableName);
+  
+  if (!tableSchema) {
+    throw new Error(`Table ${tableName} not found`);
   }
 
-  try {
-    const [schemas, tableData] = await Promise.all([
-      fetchSchema(),
-      fetchTableData(tableName, sortBy, sortOrder)
-    ]);
-
-    const schema = schemas.find(s => s.name === tableName);
-    if (!schema) {
-      throw new Response("Table not found", { status: 404 });
-    }
-
-    return json({
-      tableName,
-      schema,
-      tableData,
-      activeTab,
-      showCreateModal
-    });
-  } catch (error) {
-    console.error(`Error loading table ${tableName}:`, error);
-    throw new Response("Error loading table data", { status: 500 });
-  }
+  return json({ 
+    tableName, 
+    data,
+    columns: tableSchema.columns
+  });
 }
 
-export async function action({ request, params }: ActionFunctionArgs) {
-  const tableName = params.tableName;
-  if (!tableName) {
-    throw new Response("Table name is required", { status: 400 });
-  }
-
-  const formData = await request.formData();
-  const data = Object.fromEntries(formData);
-
-  try {
-    await createTableRow(tableName, data);
-    return json({ success: true });
-  } catch (error) {
-    console.error(`Error creating row in table ${tableName}:`, error);
-    throw new Response("Error creating row", { status: 500 });
-  }
-}
-
-export default function TableRoute() {
-  const { tableName, schema, tableData, activeTab, showCreateModal } = useLoaderData<typeof loader>();
+export default function TablePage() {
+  const { tableName, data, columns } = useLoaderData<LoaderData>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const submit = useSubmit();
+  const isClient = useClient();
+  const [selectedRow, setSelectedRow] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const sortBy = searchParams.get("sortBy");
-  const sortOrder = searchParams.get("sortOrder") as "asc" | "desc" | undefined;
+  const activeTab = searchParams.get("tab") || "content";
+  const sortBy = searchParams.get("sortBy") || undefined;
+  const sortOrder = (searchParams.get("sortOrder") as "asc" | "desc") || undefined;
 
-  const handleSort = (column: string) => {
-    const newSortOrder = sortBy === column && sortOrder === "asc" ? "desc" : "asc";
+  const handleSort = useCallback((columnId: string) => {
     setSearchParams(prev => {
-      prev.set("sortBy", column);
-      prev.set("sortOrder", newSortOrder);
-      return prev;
+      const newParams = new URLSearchParams(prev);
+      newParams.set("sortBy", columnId);
+      newParams.set("sortOrder", prev.get("sortBy") === columnId && prev.get("sortOrder") === "asc" ? "desc" : "asc");
+      return newParams;
     });
-  };
+  }, [setSearchParams]);
 
-  const handleTabChange = (tab: string) => {
+  const handleTabChange = useCallback((tabId: string) => {
     setSearchParams(prev => {
-      prev.set("tab", tab);
-      return prev;
+      const newParams = new URLSearchParams(prev);
+      newParams.set("tab", tabId);
+      return newParams;
     });
-  };
+  }, [setSearchParams]);
 
-  const handleCreateModalToggle = (show: boolean) => {
-    setSearchParams(prev => {
-      if (show) {
-        prev.set("showCreateModal", "true");
-      } else {
-        prev.delete("showCreateModal");
-      }
-      return prev;
-    });
-  };
+  const handleEdit = useCallback(async (rowIndex: number, newData: Record<string, unknown>) => {
+    if (!tableName) return;
 
-  const handleSchemaUpdate = async (updatedSchema: TableSchema) => {
+    setIsLoading(true);
+    setError(null);
     try {
-      await updateTableSchema(tableName, updatedSchema);
-      // Reload the page to get the updated schema
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to update schema:", error);
-      alert("Failed to update schema. Please try again.");
-    }
-  };
-
-  const handleCreateRow = async (data: Record<string, any>) => {
-    try {
-      const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value);
+      const response = await fetch(`/api/tables/${tableName}/rows/${rowIndex}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newData),
       });
-      await submit(formData, { method: "post" });
-      handleCreateModalToggle(false);
-    } catch (error) {
-      console.error("Failed to create row:", error);
-      alert("Failed to create row. Please try again.");
-    }
-  };
 
-  const handleEdit = async (rowIndex: number, data: Record<string, any>) => {
-    try {
-      // TODO: Implement edit functionality
-      console.log('Editing row:', rowIndex, data);
-    } catch (error) {
-      console.error('Error editing row:', error);
-    }
-  };
-
-  const handleDelete = async (rowIndex: number) => {
-    try {
-      // TODO: Implement delete functionality
-      console.log('Deleting row:', rowIndex);
-    } catch (error) {
-      console.error('Error deleting row:', error);
-    }
-  };
-
-  const formatCellValue = (value: any): string => {
-    if (value === null) return 'null';
-    if (value === undefined) return '';
-    
-    // Handle JSON objects and arrays
-    if (typeof value === 'object') {
-      try {
-        return JSON.stringify(value, null, 2);
-      } catch {
-        return String(value);
+      if (!response.ok) {
+        throw new Error(`Failed to update row: ${response.statusText}`);
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update row');
+      throw err;
+    } finally {
+      setIsLoading(false);
     }
-    
+  }, [tableName]);
+
+  const handleDelete = useCallback(async (rowIndex: number) => {
+    if (!tableName) return;
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/tables/${tableName}/rows/${rowIndex}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete row: ${response.statusText}`);
+      }
+
+      if (selectedRow === rowIndex) {
+        setSelectedRow(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete row');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [tableName, selectedRow]);
+
+  const formatCellValue = useCallback((value: unknown): string => {
+    if (value === null) return "NULL";
+    if (value === undefined) return "";
+    if (typeof value === "object") return JSON.stringify(value);
     return String(value);
-  };
+  }, []);
 
   const tabs = [
-    { label: "Data", id: "data" },
-    { label: "Structure", id: "structure" },
+    { id: "content", label: "Content" },
+    { id: "structure", label: "Structure" },
+    { id: "indexes", label: "Indexes" },
+    { id: "foreign-keys", label: "Foreign Keys" },
   ];
 
-  return (
-    <PageContainer>
-      <div className="flex-none">
-        <div className="flex items-center justify-between p-4">
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-            {tableName}
-          </h1>
-          {activeTab === "data" && (
-            <div className="flex gap-2">
-              <Button onClick={() => handleCreateModalToggle(true)}>
-                Create Row
-              </Button>
-            </div>
-          )}
-        </div>
-        <TabView
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-        />
-      </div>
-      <div className="flex-1 min-h-0 p-4 overflow-y-auto">
-        {activeTab === "data" ? (
-          tableData ? (
-            <DataView
-              columns={schema?.columns || []}
-              rows={tableData.data}
-              sortBy={sortBy || ''}
-              sortOrder={sortOrder}
-              onSort={handleSort}
-              formatCellValue={formatCellValue}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              isEditable={true}
+  const renderTabContent = () => {
+    if (!isClient) {
+      return null;
+    }
+
+    switch (activeTab) {
+      case "content":
+        if (data.data.length === 0) {
+          return (
+            <EmptyState
+              type="table"
+              title="No Data"
+              message="This table is empty"
             />
-          ) : null
-        ) : (
-          <StructureView
-            schema={schema}
-            onSave={handleSchemaUpdate}
+          );
+        }
+        return (
+          <DataView
+            columns={columns}
+            rows={data.data}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={handleSort}
+            formatCellValue={formatCellValue}
+            isEditable={true}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            selectedRow={isNumber(selectedRow) ? selectedRow : undefined}
+            onRowSelect={setSelectedRow}
+            isLoading={isLoading}
+            error={error || undefined}
           />
-        )}
+        );
+      case "structure":
+        if (columns.length === 0) {
+          return (
+            <EmptyState
+              type="database"
+              title="No Columns"
+              message="This table has no columns defined"
+            />
+          );
+        }
+        return (
+          <div className="space-y-4">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nullable</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Default</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                  {columns.map((column, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{column.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{column.type}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{column.nullable ? 'Yes' : 'No'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{column.defaultValue || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="flex-none p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+          {startCase(tableName)}
+        </h1>
       </div>
-      {showCreateModal && (
-        <CreateRowModal
-          tableName={tableName}
-          fields={schema?.columns || []}
-          onClose={() => handleCreateModalToggle(false)}
-          onSubmit={handleCreateRow}
-        />
-      )}
-    </PageContainer>
+
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-none border-b border-gray-200 dark:border-gray-700">
+          <TabView 
+            tabs={tabs} 
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+          />
+        </div>
+        <>
+          <div className="flex-1 min-h-0 p-4 overflow-y-auto">
+            {renderTabContent()}
+          </div>
+          <RowDetailsSidebar
+            row={selectedRow !== null ? data.data[selectedRow] : null}
+            columns={columns}
+            isOpen={selectedRow !== null}
+            onClose={() => setSelectedRow(null)}
+            formatCellValue={formatCellValue}
+          />
+        </>
+      </div>
+    </div>
   );
 }

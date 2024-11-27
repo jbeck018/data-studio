@@ -1,9 +1,9 @@
 import { json, type LoaderFunctionArgs, type MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { useState } from "react";
-import { fetchSchema } from "~/utils/api";
 import { TableList } from "~/components/TableList";
 import { PageContainer } from "~/components/PageContainer";
+import type { TableSchema } from "~/types";
 
 export const meta: MetaFunction = () => {
   return [
@@ -14,6 +14,7 @@ export const meta: MetaFunction = () => {
 
 export async function loader({ request }: LoaderFunctionArgs) {
   try {
+    const { fetchSchema } = await import("~/utils/api.server");
     const tables = await fetchSchema();
     return json({ tables });
   } catch (error) {
@@ -22,8 +23,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 }
 
+type LoaderData = {
+  tables: TableSchema[];
+};
+
 export default function Index() {
-  const { tables } = useLoaderData<typeof loader>();
+  const { tables } = useLoaderData<LoaderData>();
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredTables = tables.filter((table) =>
@@ -48,10 +53,7 @@ export default function Index() {
           </div>
         </div>
       </div>
-
-      <div className="flex-1 min-h-0 p-4 overflow-y-auto">
-        <TableList tables={filteredTables} />
-      </div>
+      <TableList tables={filteredTables} />
     </PageContainer>
   );
 }

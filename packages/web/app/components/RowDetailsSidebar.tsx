@@ -1,16 +1,16 @@
-import { XMarkIcon } from "@heroicons/react/24/outline";
-import type { Column } from "~/types";
-import { startCase } from "lodash-es";
-import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import { startCase } from "lodash-es";
 import { cn } from "~/utils/cn";
+import type { Column } from "~/types";
 
 interface RowDetailsSidebarProps {
-  row: Record<string, any> | null;
+  row: Record<string, unknown> | null;
   columns: Column[];
   isOpen: boolean;
   onClose: () => void;
-  formatCellValue: (value: any) => string;
+  formatCellValue: (value: unknown) => string;
 }
 
 export function RowDetailsSidebar({
@@ -21,7 +21,6 @@ export function RowDetailsSidebar({
   formatCellValue,
 }: RowDetailsSidebarProps) {
   const [mounted, setMounted] = useState(false);
-  console.log(row, isOpen);
 
   useEffect(() => {
     setMounted(true);
@@ -41,44 +40,47 @@ export function RowDetailsSidebar({
       />
       <div
         className={cn(
-          "fixed inset-y-0 right-0 w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-xl transform transition-transform duration-300 ease-in-out z-50",
+          "m-6 border rounded-lg fixed inset-y-0 right-0 w-96 bg-white dark:bg-gray-900 shadow-xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col",
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
       >
-        <div className="h-full flex flex-col">
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Row Details</h3>
-            <button
-              onClick={onClose}
-              className="p-1 rounded-md text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
-            >
-              <XMarkIcon className="h-6 w-6" />
-            </button>
-          </div>
-          {row && (
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-4">
-                {columns.map((column) => (
-                  <div key={column.name} className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+        <div className=" rounded-lg flex-none px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-800">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Row Details</h3>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+        {row && (
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-4 space-y-4">
+              {columns.map((column) => (
+                <div 
+                  key={column.name}
+                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+                >
+                  <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {startCase(column.name)}
                       </span>
-                      <span className="text-xs text-gray-400 dark:text-gray-500">
-                        ({column.type})
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                        {column.type}
                       </span>
                     </div>
-                    <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-md">
-                      <pre className="text-sm font-mono text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
-                        {formatCellValue(row[column.name])}
-                      </pre>
+                  </div>
+                  <div className="px-4 py-3 bg-white dark:bg-gray-900">
+                    <div className="font-mono text-sm text-gray-900 dark:text-gray-100 break-words">
+                      {formatCellValue(row[column.name])}
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </>
   );

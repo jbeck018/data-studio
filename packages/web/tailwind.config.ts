@@ -1,7 +1,9 @@
+/** @type {import('tailwindcss').Config} */
 import type { Config } from 'tailwindcss'
 
 export default {
   content: ['./app/**/*.{js,jsx,ts,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -18,6 +20,32 @@ export default {
           900: '#0c4a6e',
           950: '#082f49',
         },
+        dark: {
+          bg: {
+            primary: '#1a1b1e',
+            secondary: '#25262b',
+            tertiary: '#2c2e33',
+          },
+          text: {
+            primary: '#ffffff',
+            secondary: '#a6a7ab',
+            tertiary: '#5c5f66',
+          },
+          border: '#2c2e33',
+        },
+        light: {
+          bg: {
+            primary: '#ffffff',
+            secondary: '#f8f9fa',
+            tertiary: '#f1f3f5',
+          },
+          text: {
+            primary: '#1a1b1e',
+            secondary: '#868e96',
+            tertiary: '#adb5bd',
+          },
+          border: '#dee2e6',
+        }
       },
     },
   },
