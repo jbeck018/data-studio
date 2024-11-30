@@ -4,19 +4,28 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   plugins: [
-    remix({
-      future: {
-        v3_fetcherPersist: true,
-        v3_lazyRouteDiscovery: true,
-        v3_relativeSplatPath: true,
-        v3_singleFetch: true,
-        v3_throwAbortReason: true,
-      },
-    }), 
+    remix(), 
     tsconfigPaths()
   ],
   server: {
     port: 3000,
+  },
+  resolve: {
+    alias: {
+      events: 'events',
+      crypto: 'crypto-browserify',
+      stream: 'stream-browserify',
+      path: 'path-browserify',
+      util: 'util',
+      buffer: 'buffer',
+    },
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: 'globalThis'
+      }
+    }
   },
   css: {
     postcss: ".",

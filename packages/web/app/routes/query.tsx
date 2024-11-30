@@ -1,27 +1,51 @@
 import { useState } from "react";
 import { format } from "sql-formatter";
-import type { QueryResult } from "~/types";
+import type { QueryResult, TableSchema } from "~/types";
 import { PageContainer } from "~/components/PageContainer";
 import { EmptyState } from "~/components/EmptyState";
+import { LoadingSpinner } from "~/components/LoadingSpinner";
+import { Alert } from "~/components/Alert";
 import { json, type ActionFunctionArgs } from "@remix-run/node";
-import { useActionData, Form, useNavigation } from "@remix-run/react";
+import { useActionData, Form, useNavigation, useLoaderData } from "@remix-run/react";
+import { QueryEngine } from "~/lib/db/query-engine.server";
+import { requireUser } from "~/lib/auth/session.server";
+import { SQLEditor } from "~/components/SQLEditor";
+import { fetchSchema } from "~/utils/api.server";
 
 interface ActionData {
   result?: QueryResult;
   error?: string;
 }
 
+interface LoaderData {
+  schema: TableSchema[];
+}
+
+export async function loader() {
+  const schema = await fetchSchema();
+  return json<LoaderData>({ schema });
+}
+
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
   const query = formData.get("query") as string;
+  const connectionId = formData.get("connectionId") as string;
 
   if (!query?.trim()) {
     return json<ActionData>({ error: "Query is required" });
   }
 
+  if (!connectionId) {
+    return json<ActionData>({ error: "Database connection is required" });
+  }
+
   try {
-    const { executeQuery } = await import("~/utils/api.server");
-    const result = await executeQuery(query);
+    const user = await requireUser(request);
+    const queryEngine = QueryEngine.getInstance();
+    const result = await queryEngine.executeQuery(query, {
+      connectionId,
+      userId: user.id,
+    });
     return json<ActionData>({ result });
   } catch (error) {
     return json<ActionData>({ 
@@ -32,24 +56,65 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export default function QueryPage() {
   const [query, setQuery] = useState("");
+  const [isFormatting, setIsFormatting] = useState(false);
+  const [syntaxError, setSyntaxError] = useState<string | null>(null);
   const actionData = useActionData<ActionData>();
+  const { schema } = useLoaderData<LoaderData>();
   const navigation = useNavigation();
   const isExecuting = navigation.state === "submitting";
 
-  const handleFormat = () => {
+  const handleFormat = async () => {
+    if (!query.trim()) return;
+    
+    setIsFormatting(true);
     try {
       const formatted = format(query, { language: 'postgresql' });
       setQuery(formatted);
     } catch (err) {
       console.error('Error formatting query:', err);
+    } finally {
+      setIsFormatting(false);
     }
   };
 
-  const renderResults = () => {
+  const handleSyntaxError = (error: string | null) => {
+    setSyntaxError(error);
+  };
+
+  const renderError = () => {
+    if (syntaxError) {
+      return (
+        <Alert
+          type="warning"
+          title="SQL Syntax Warning"
+          message={syntaxError}
+          className="mb-4"
+        />
+      );
+    }
+
     if (actionData?.error) {
       return (
-        <div className="p-4 bg-red-50 dark:bg-red-900/50 rounded-lg">
-          <p className="text-sm text-red-700 dark:text-red-300">{actionData.error}</p>
+        <Alert
+          type="error"
+          title="Query Error"
+          message={actionData.error}
+          className="mb-4"
+        />
+      );
+    }
+
+    return null;
+  };
+
+  const renderResults = () => {
+    if (isExecuting) {
+      return (
+        <div className="flex flex-col items-center justify-center p-12 space-y-4">
+          <LoadingSpinner size="lg" />
+          <p className="text-light-text-secondary dark:text-dark-text-secondary">
+            Executing query...
+          </p>
         </div>
       );
     }
@@ -66,10 +131,11 @@ export default function QueryPage() {
 
     if (actionData.result.rows.length === 0) {
       return (
-        <EmptyState
-          type="query"
-          title="No Results Found"
-          message="Your query executed successfully but returned no results."
+        <Alert
+          type="info"
+          title="Query Executed Successfully"
+          message="Your query returned no results."
+          className="mb-4"
         />
       );
     }
@@ -127,28 +193,43 @@ export default function QueryPage() {
               <button
                 onClick={handleFormat}
                 type="button"
-                className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                disabled={isFormatting || !query.trim()}
+                className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
-                Format Query
+                {isFormatting ? (
+                  <>
+                    <LoadingSpinner size="sm" />
+                    <span>Formatting...</span>
+                  </>
+                ) : (
+                  <span>Format Query</span>
+                )}
               </button>
             </div>
             <Form method="post">
-              <textarea
-                id="query"
-                name="query"
+              <input type="hidden" name="query" value={query} />
+              {renderError()}
+              <SQLEditor
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 text-light-text-primary dark:text-dark-text-primary bg-light-bg-primary dark:bg-dark-bg-secondary border border-light-border dark:border-dark-border rounded-lg focus:outline-none focus:border-primary-500 dark:focus:border-primary-400"
-                placeholder="Enter your SQL query here..."
+                onChange={setQuery}
+                onError={handleSyntaxError}
+                className="mb-4"
+                schema={schema}
               />
               <div className="mt-4">
                 <button
                   type="submit"
                   disabled={isExecuting || !query.trim()}
-                  className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
-                  {isExecuting ? 'Executing...' : 'Execute Query'}
+                  {isExecuting ? (
+                    <>
+                      <LoadingSpinner size="sm" className="text-white" />
+                      <span>Executing...</span>
+                    </>
+                  ) : (
+                    <span>Execute Query</span>
+                  )}
                 </button>
               </div>
             </Form>
