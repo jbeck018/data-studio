@@ -1,74 +1,93 @@
-import { useEffect, useCallback, useRef } from 'react';
-import { WebSocketClient } from '~/utils/websocket.client';
-import type { WebSocketMessage } from '~/types/websocket';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { WebSocketMessage, WebSocketClientMessage } from '~/types/websocket';
 
 interface UseWebSocketOptions {
   onMessage?: (message: WebSocketMessage) => void;
+  onError?: (error: Error) => void;
   debug?: boolean;
-  autoReconnect?: boolean;
-  reconnectInterval?: number;
-  maxReconnectAttempts?: number;
 }
 
-export function useWebSocket(url: string, options: UseWebSocketOptions = {}) {
-  const clientRef = useRef<WebSocketClient>();
-  const messageHandlerRef = useRef(options.onMessage);
+export function useWebSocket({ onMessage, onError, debug = false }: UseWebSocketOptions = {}) {
+  const [isConnected, setIsConnected] = useState(false);
+  const ws = useRef<WebSocket | null>(null);
+  const reconnectTimeout = useRef<NodeJS.Timeout>();
+  const reconnectAttempts = useRef(0);
+  const MAX_RECONNECT_ATTEMPTS = 5;
+  const RECONNECT_INTERVAL = 2000;
 
-  // Update message handler ref when the callback changes
-  useEffect(() => {
-    messageHandlerRef.current = options.onMessage;
-  }, [options.onMessage]);
+  const connect = useCallback(() => {
+    if (ws.current?.readyState === WebSocket.OPEN) return;
 
-  // Initialize WebSocket client
-  useEffect(() => {
-    const client = WebSocketClient.getInstance({
-      debug: options.debug,
-      reconnectInterval: options.reconnectInterval,
-      maxReconnectAttempts: options.maxReconnectAttempts,
-    });
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    ws.current = new WebSocket(wsUrl);
 
-    clientRef.current = client;
-
-    const handleMessage = (event: CustomEvent<WebSocketMessage>) => {
-      messageHandlerRef.current?.(event.detail);
+    ws.current.onopen = () => {
+      if (debug) console.log('WebSocket connected');
+      setIsConnected(true);
+      reconnectAttempts.current = 0;
     };
 
-    // Add event listener for WebSocket messages
-    window.addEventListener('websocket-message', handleMessage as EventListener);
+    ws.current.onclose = () => {
+      if (debug) console.log('WebSocket disconnected');
+      setIsConnected(false);
 
-    // Connect to WebSocket server
-    client.connect(url).catch((error) => {
-      console.error('Failed to connect to WebSocket server:', error);
-    });
-
-    return () => {
-      window.removeEventListener('websocket-message', handleMessage as EventListener);
-      client.close();
+      if (reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
+        reconnectTimeout.current = setTimeout(() => {
+          reconnectAttempts.current++;
+          connect();
+        }, RECONNECT_INTERVAL * Math.pow(2, reconnectAttempts.current));
+      } else {
+        onError?.(new Error('Failed to connect to WebSocket server after multiple attempts'));
+      }
     };
-  }, [url, options.debug, options.reconnectInterval, options.maxReconnectAttempts]);
 
-  // Subscribe to a channel
-  const subscribe = useCallback((channel: string) => {
-    clientRef.current?.subscribe(channel);
-  }, []);
+    ws.current.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      onError?.(new Error('WebSocket connection error'));
+    };
 
-  // Unsubscribe from a channel
-  const unsubscribe = useCallback((channel: string) => {
-    clientRef.current?.unsubscribe(channel);
-  }, []);
+    ws.current.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data) as WebSocketMessage;
+        if (debug) console.log('Received WebSocket message:', message);
+        onMessage?.(message);
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    };
+  }, [debug, onError, onMessage]);
 
-  // Send a message
-  const send = useCallback((message: WebSocketMessage) => {
-    if (!clientRef.current) {
-      console.error('WebSocket client not initialized');
+  const sendMessage = useCallback((message: WebSocketClientMessage) => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket is not connected');
       return;
     }
-    clientRef.current.send(message);
-  }, []);
+
+    try {
+      ws.current.send(JSON.stringify(message));
+      if (debug) console.log('Sent WebSocket message:', message);
+    } catch (error) {
+      console.error('Error sending WebSocket message:', error);
+      onError?.(new Error('Failed to send WebSocket message'));
+    }
+  }, [debug, onError]);
+
+  useEffect(() => {
+    connect();
+    return () => {
+      if (reconnectTimeout.current) {
+        clearTimeout(reconnectTimeout.current);
+      }
+      if (ws.current) {
+        ws.current.close();
+      }
+    };
+  }, [connect]);
 
   return {
-    subscribe,
-    unsubscribe,
-    send,
+    isConnected,
+    sendMessage,
   };
 }

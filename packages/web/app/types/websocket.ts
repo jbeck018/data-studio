@@ -1,8 +1,23 @@
+import { WebSocket } from 'ws';
+
 export interface WebSocketMessage {
-  type: 'subscribe' | 'unsubscribe' | 'notification' | 'error' | 'subscribed' | 'unsubscribed';
+  type: string;
   channel?: string;
   payload?: any;
   message?: string;
+}
+
+export interface WebSocketClientMessage {
+  type: 'subscribe' | 'unsubscribe' | 'execute_query' | 'cancel_query';
+  channel?: string;
+  sql?: string;
+  queryId?: string;
+  options?: {
+    batchSize?: number;
+    maxRows?: number;
+    timeout?: number;
+    includeProgress?: boolean;
+  };
 }
 
 export interface QueryNotification {
@@ -35,8 +50,9 @@ export interface SystemNotification {
 
 export type NotificationPayload = QueryNotification | TableUpdateNotification | SystemNotification;
 
-export interface Subscription {
-  ws: WebSocket;
+export interface AuthenticatedWebSocket extends WebSocket {
+  userId: string;
+  isAlive: boolean;
   channels: Set<string>;
 }
 

@@ -1,37 +1,38 @@
 import { db } from "~/lib/db/db.server";
-import { organizations, organizationMembers } from "~/lib/db/schema/organizations";
+import { organizations, organizationMembers } from "~/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 
 interface CreateOrganizationInput {
   name: string;
+  slug: string;
+  description?: string;
   userId: string;
 }
 
 interface UpdateOrganizationInput {
   name?: string;
+  description?: string;
 }
 
-export async function createOrganization({ name, userId }: CreateOrganizationInput) {
-  const slug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${createId().slice(0, 8)}`;
-
+export async function createOrganization({ name, slug, description, userId }: CreateOrganizationInput) {
   const [organization] = await db.insert(organizations)
-    .values({ name, slug })
+    .values({ name, slug, description })
     .returning();
 
   await db.insert(organizationMembers)
     .values({
       organizationId: organization.id,
       userId,
-      role: "owner",
+      role: "OWNER",
     });
 
   return organization;
 }
 
-export async function updateOrganization(id: string, { name }: UpdateOrganizationInput) {
+export async function updateOrganization(id: string, { name, description }: UpdateOrganizationInput) {
   const [organization] = await db.update(organizations)
-    .set({ name, updatedAt: new Date() })
+    .set({ name, description, updatedAt: new Date() })
     .where(eq(organizations.id, id))
     .returning();
 
@@ -65,7 +66,11 @@ export async function getUserOrganizations(userId: string) {
   });
 }
 
-export async function addOrganizationMember(organizationId: string, userId: string, role: "admin" | "member" = "member") {
+export async function addOrganizationMember(
+  organizationId: string,
+  userId: string,
+  role: "ADMIN" | "MEMBER" = "MEMBER"
+) {
   const [member] = await db.insert(organizationMembers)
     .values({ organizationId, userId, role })
     .returning();
@@ -73,7 +78,11 @@ export async function addOrganizationMember(organizationId: string, userId: stri
   return member;
 }
 
-export async function updateOrganizationMemberRole(organizationId: string, userId: string, role: "admin" | "member") {
+export async function updateOrganizationMemberRole(
+  organizationId: string,
+  userId: string,
+  role: "ADMIN" | "MEMBER"
+) {
   const [member] = await db.update(organizationMembers)
     .set({ role, updatedAt: new Date() })
     .where(
@@ -103,6 +112,9 @@ export async function getOrganizationRole(organizationId: string, userId: string
       eq(organizationMembers.organizationId, organizationId),
       eq(organizationMembers.userId, userId)
     ),
+    columns: {
+      role: true,
+    },
   });
 
   return member?.role;

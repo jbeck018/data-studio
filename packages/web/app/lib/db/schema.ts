@@ -6,6 +6,8 @@ import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 export const organizations = pgTable('organizations', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -18,6 +20,7 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  lastLogin: timestamp('last_login'),
 });
 
 // Organization members table (many-to-many relationship)
@@ -25,7 +28,7 @@ export const organizationMembers = pgTable('organization_members', {
   id: uuid('id').primaryKey().defaultRandom(),
   organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  role: text('role').notNull(), // 'admin', 'member'
+  role: text('role', { enum: ['OWNER', 'ADMIN', 'MEMBER'] }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -35,63 +38,49 @@ export const databaseConnections = pgTable('database_connections', {
   id: uuid('id').primaryKey().defaultRandom(),
   organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
-  type: text('type').notNull(), // 'postgresql', etc.
-  // Encrypted connection details stored as JSON
-  credentials: jsonb('credentials').notNull(),
+  type: text('type', { enum: ['POSTGRES', 'MYSQL'] }).notNull(),
+  host: text('host').notNull(),
+  port: text('port').notNull(),
+  database: text('database').notNull(),
+  username: text('username').notNull(),
+  password: text('password').notNull(),
+  ssl: boolean('ssl').default(false).notNull(),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   lastConnectedAt: timestamp('last_connected_at'),
 });
 
-// Saved queries table
-export const savedQueries = pgTable('saved_queries', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
-  connectionId: uuid('connection_id').notNull().references(() => databaseConnections.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  description: text('description'),
-  query: text('query').notNull(),
-  createdBy: uuid('created_by').notNull().references(() => users.id),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
-
-// Query history table
-export const queryHistory = pgTable('query_history', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
-  connectionId: uuid('connection_id').notNull().references(() => databaseConnections.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull().references(() => users.id),
-  query: text('query').notNull(),
-  executionTimeMs: text('execution_time_ms'),
-  status: text('status').notNull(), // 'success', 'error'
-  error: text('error'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
-
-// Define relationships
+// Relations
 export const organizationsRelations = relations(organizations, ({ many }) => ({
   members: many(organizationMembers),
   connections: many(databaseConnections),
-  savedQueries: many(savedQueries),
-  queryHistory: many(queryHistory),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
-  organizations: many(organizationMembers),
-  savedQueries: many(savedQueries),
-  queryHistory: many(queryHistory),
+  organizationMemberships: many(organizationMembers),
 }));
 
-// Zod schemas for validation
-export const insertOrganizationSchema = createInsertSchema(organizations);
-export const insertUserSchema = createInsertSchema(users);
-export const insertDatabaseConnectionSchema = createInsertSchema(databaseConnections);
-export const insertSavedQuerySchema = createInsertSchema(savedQueries);
+export const organizationMembersRelations = relations(organizationMembers, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationMembers.organizationId],
+    references: [organizations.id],
+  }),
+  user: one(users, {
+    fields: [organizationMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const databaseConnectionsRelations = relations(databaseConnections, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [databaseConnections.organizationId],
+    references: [organizations.id],
+  }),
+}));
 
 // Export select schemas
 export const selectOrganizationSchema = createSelectSchema(organizations);
 export const selectUserSchema = createSelectSchema(users);
+export const selectOrganizationMemberSchema = createSelectSchema(organizationMembers);
 export const selectDatabaseConnectionSchema = createSelectSchema(databaseConnections);
-export const selectSavedQuerySchema = createSelectSchema(savedQueries);

@@ -1,16 +1,16 @@
-import type { WebSocket } from 'ws';
+import type { WebSocket, WebSocketServer } from 'ws';
 import { getUserSession } from '~/lib/auth/session.server';
 import type { IncomingMessage } from 'http';
 import { parse } from 'cookie';
+import type { AuthenticatedWebSocket } from '~/types/websocket';
 
 export async function authenticateWebSocket(
-  ws: WebSocket,
+  wss: WebSocketServer,
   request: IncomingMessage
 ): Promise<boolean> {
   try {
     const cookieHeader = request.headers.cookie;
     if (!cookieHeader) {
-      ws.close(1008, 'Authentication required');
       return false;
     }
 
@@ -18,7 +18,6 @@ export async function authenticateWebSocket(
     const sessionCookie = cookies['__session'];
     
     if (!sessionCookie) {
-      ws.close(1008, 'Session not found');
       return false;
     }
 
@@ -33,17 +32,20 @@ export async function authenticateWebSocket(
     const userId = await session.get('userId');
     
     if (!userId) {
-      ws.close(1008, 'Invalid session');
       return false;
     }
 
-    // Add userId to WebSocket instance for future reference
-    (ws as any).userId = userId;
+    // Store userId in the WebSocket server's auth context
+    wss.once('connection', (ws: WebSocket) => {
+      const authWs = ws as AuthenticatedWebSocket;
+      authWs.userId = userId;
+      authWs.isAlive = true;
+      authWs.channels = new Set();
+    });
 
     return true;
   } catch (error) {
     console.error('WebSocket authentication error:', error);
-    ws.close(1011, 'Authentication error');
     return false;
   }
 }

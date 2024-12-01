@@ -3,6 +3,12 @@ import { Link, useLoaderData } from "@remix-run/react";
 import { requireUser } from "~/lib/auth/session.server";
 import { getUserOrganizations } from "~/lib/organizations/organizations.server";
 
+interface Organization {
+  id: string;
+  name: string;
+  createdAt: Date;
+}
+
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const organizations = await getUserOrganizations(user.id);
@@ -10,7 +16,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export default function OrganizationsPage() {
-  const { organizations } = useLoaderData<typeof loader>();
+  const { organizations } = useLoaderData<{ organizations: Organization[] }>();
 
   return (
     <div className="p-6">
@@ -25,7 +31,7 @@ export default function OrganizationsPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {organizations.map(({ organization }) => (
+        {organizations.map((organization) => (
           <Link
             key={organization.id}
             to={`/organizations/${organization.id}`}

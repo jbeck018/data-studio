@@ -1,4 +1,5 @@
 import { format } from "sql-formatter";
+import { QueryError } from '~/types/query';
 
 /**
  * Sanitizes table and column names to prevent SQL injection.
@@ -7,7 +8,7 @@ import { format } from "sql-formatter";
  */
 export function sanitizeTableName(name: string): string {
   if (!name) {
-    throw new Error('Table or column name cannot be empty');
+    throw new QueryError('Table or column name cannot be empty', 'INVALID_NAME');
   }
 
   // Remove any characters that aren't alphanumeric or underscores
@@ -15,12 +16,12 @@ export function sanitizeTableName(name: string): string {
 
   // Ensure the name starts with a letter
   if (!/^[a-zA-Z]/.test(sanitized)) {
-    throw new Error('Table or column name must start with a letter');
+    throw new QueryError('Table or column name must start with a letter', 'INVALID_NAME');
   }
 
   // Ensure we still have a valid name after sanitization
   if (sanitized.length === 0) {
-    throw new Error('Invalid table or column name');
+    throw new QueryError('Invalid table or column name', 'INVALID_NAME');
   }
 
   // Convert to lowercase for consistency
@@ -100,95 +101,95 @@ export function sanitizeLimit(limit?: number): string {
   return `LIMIT ${Math.floor(limit)}`;
 }
 
-class SQLSanitizer {
+export class SQLSanitizer {
   private readonly allowedTableNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
   private readonly allowedColumnNamePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+  private readonly reservedKeywords = new Set([
+    'select', 'insert', 'update', 'delete', 'drop', 'truncate', 'alter',
+    'create', 'table', 'database', 'schema', 'grant', 'revoke'
+  ]);
 
-  private validateTableName(tableName: string): boolean {
-    return this.allowedTableNamePattern.test(tableName);
+  public validateTableName(tableName: string): boolean {
+    return this.allowedTableNamePattern.test(tableName) && 
+           !this.reservedKeywords.has(tableName.toLowerCase());
   }
 
-  private validateColumnName(columnName: string): boolean {
-    return this.allowedColumnNamePattern.test(columnName);
+  public validateColumnName(columnName: string): boolean {
+    return this.allowedColumnNamePattern.test(columnName) &&
+           !this.reservedKeywords.has(columnName.toLowerCase());
   }
 
-  private escapeValue(value: any): string {
-    if (value === null) return "NULL";
-    if (typeof value === "number") return value.toString();
-    if (typeof value === "boolean") return value ? "TRUE" : "FALSE";
+  public escapeValue(value: any): string {
+    if (value === null) return 'NULL';
+    if (typeof value === 'number') return value.toString();
+    if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+    if (value instanceof Date) return `'${value.toISOString()}'`;
     return `'${value.toString().replace(/'/g, "''")}'`;
   }
 
-  sanitizeTableQuery(tableName: string, filters?: Record<string, any>): string {
+  public sanitizeQuery(query: string): string {
+    // Remove comments
+    query = query.replace(/--.*$/gm, '');
+    query = query.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    // Check for dangerous keywords
+    const dangerousPatterns = [
+      /;\s*drop\s/i,
+      /;\s*delete\s/i,
+      /;\s*truncate\s/i,
+      /;\s*alter\s/i,
+      /;\s*grant\s/i,
+      /;\s*revoke\s/i,
+      /union\s+all/i,
+      /union\s+select/i,
+    ];
+
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(query)) {
+        throw new QueryError('Query contains dangerous operations', 'DANGEROUS_QUERY');
+      }
+    }
+
+    // Format the query for consistency
+    return format(query, {
+      language: 'postgresql',
+      keywordCase: 'upper',
+    });
+  }
+
+  public sanitizeTableQuery(tableName: string, filters?: Record<string, any>): string {
     if (!this.validateTableName(tableName)) {
-      throw new Error("Invalid table name");
+      throw new QueryError('Invalid table name', 'INVALID_TABLE');
     }
 
     let query = `SELECT * FROM "${tableName}"`;
 
     if (filters && Object.keys(filters).length > 0) {
-      const whereConditions = Object.entries(filters)
-        .filter(([column]) => this.validateColumnName(column))
-        .map(([column, value]) => `"${column}" = ${this.escapeValue(value)}`)
-        .join(" AND ");
-
-      if (whereConditions) {
-        query += ` WHERE ${whereConditions}`;
-      }
+      const { clause, values } = createWhereClause(filters);
+      query += ` ${clause}`;
+      return format(query, { language: 'postgresql' });
     }
 
-    return format(query + ";");
+    return format(query, { language: 'postgresql' });
   }
 
-  sanitizeSchemaQuery(tableName: string): string {
-    if (!this.validateTableName(tableName)) {
-      throw new Error("Invalid table name");
-    }
-
-    const query = `
-      SELECT 
-        column_name,
-        data_type,
-        is_nullable,
-        column_default,
-        CASE 
-          WHEN pk.constraint_type = 'PRIMARY KEY' THEN true
-          ELSE false
-        END as is_primary_key
-      FROM information_schema.columns c
-      LEFT JOIN (
-        SELECT kcu.column_name, tc.constraint_type
-        FROM information_schema.table_constraints tc
-        JOIN information_schema.key_column_usage kcu
-          ON tc.constraint_name = kcu.constraint_name
-          AND tc.table_schema = kcu.table_schema
-        WHERE tc.table_name = '${tableName}'
-          AND tc.constraint_type = 'PRIMARY KEY'
-      ) pk ON c.column_name = pk.column_name
-      WHERE table_name = '${tableName}'
-      ORDER BY ordinal_position;
-    `;
-
-    return format(query);
-  }
-
-  sanitizeUpdateQuery(
+  public sanitizeUpdateQuery(
     tableName: string,
     primaryKey: { column: string; value: any },
     data: Record<string, any>
   ): string {
     if (!this.validateTableName(tableName)) {
-      throw new Error("Invalid table name");
+      throw new QueryError('Invalid table name', 'INVALID_TABLE');
     }
 
     if (!this.validateColumnName(primaryKey.column)) {
-      throw new Error("Invalid primary key column name");
+      throw new QueryError('Invalid primary key column name', 'INVALID_COLUMN');
     }
 
     const setClauses = Object.entries(data)
       .filter(([column]) => this.validateColumnName(column))
       .map(([column, value]) => `"${column}" = ${this.escapeValue(value)}`)
-      .join(", ");
+      .join(', ');
 
     const query = `
       UPDATE "${tableName}"
@@ -197,46 +198,45 @@ class SQLSanitizer {
       RETURNING *;
     `;
 
-    return format(query);
+    return format(query, { language: 'postgresql' });
   }
 
-  sanitizeDeleteQuery(
+  public sanitizeDeleteQuery(
     tableName: string,
     primaryKey: { column: string; value: any }
   ): string {
     if (!this.validateTableName(tableName)) {
-      throw new Error("Invalid table name");
+      throw new QueryError('Invalid table name', 'INVALID_TABLE');
     }
 
     if (!this.validateColumnName(primaryKey.column)) {
-      throw new Error("Invalid primary key column name");
+      throw new QueryError('Invalid primary key column name', 'INVALID_COLUMN');
     }
 
     const query = `
       DELETE FROM "${tableName}"
-      WHERE "${primaryKey.column}" = ${this.escapeValue(primaryKey.value)};
-    `;
-
-    return format(query);
-  }
-
-  sanitizeInsertQuery(tableName: string, data: Record<string, any>): string {
-    if (!this.validateTableName(tableName)) {
-      throw new Error("Invalid table name");
-    }
-
-    const columns = Object.keys(data).filter((column) =>
-      this.validateColumnName(column)
-    );
-    const values = columns.map((column) => this.escapeValue(data[column]));
-
-    const query = `
-      INSERT INTO "${tableName}" (${columns.map((c) => `"${c}"`).join(", ")})
-      VALUES (${values.join(", ")})
+      WHERE "${primaryKey.column}" = ${this.escapeValue(primaryKey.value)}
       RETURNING *;
     `;
 
-    return format(query);
+    return format(query, { language: 'postgresql' });
+  }
+
+  public sanitizeInsertQuery(tableName: string, data: Record<string, any>): string {
+    if (!this.validateTableName(tableName)) {
+      throw new QueryError('Invalid table name', 'INVALID_TABLE');
+    }
+
+    const columns = Object.keys(data).filter(column => this.validateColumnName(column));
+    const values = columns.map(column => this.escapeValue(data[column]));
+
+    const query = `
+      INSERT INTO "${tableName}" (${columns.map(c => `"${c}"`).join(', ')})
+      VALUES (${values.join(', ')})
+      RETURNING *;
+    `;
+
+    return format(query, { language: 'postgresql' });
   }
 }
 

@@ -1,11 +1,21 @@
 import { createCookieSessionStorage, redirect } from "@remix-run/node";
 import bcrypt from "bcryptjs";
 import { db } from "~/lib/db/db.server";
-import { users } from "~/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { users, organizationMembers, databaseConnections } from "~/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 import type { InferSelectModel } from 'drizzle-orm';
+import { getUserOrganizationRole, getUserOrganizationPermissions, Role } from "~/lib/auth/rbac.server";
 
-type User = InferSelectModel<typeof users>;
+export type User = InferSelectModel<typeof users> & {
+  organizationMemberships: Array<{
+    id: string;
+    role: Role;
+  }>;
+  currentOrganization: string | null;
+  organizationRole: Role | null;
+  organizationPermissions: string[] | null;
+  hasConnection: boolean;
+};
 
 export const sessionStorage = createCookieSessionStorage({
   cookie: {
@@ -19,6 +29,7 @@ export const sessionStorage = createCookieSessionStorage({
 });
 
 const USER_SESSION_KEY = "userId";
+const ORGANIZATION_SESSION_KEY = "organizationId";
 const SESSION_EXPIRY = 60 * 60 * 24 * 30; // 30 days
 
 export async function createUser(email: string, password: string): Promise<User> {
@@ -38,7 +49,16 @@ export async function createUser(email: string, password: string): Promise<User>
     updatedAt: new Date(),
   }).returning();
 
-  return result[0];
+  const user = result[0];
+
+  return {
+    ...user,
+    organizationMemberships: [],
+    currentOrganization: null,
+    organizationRole: null,
+    organizationPermissions: null,
+    hasConnection: false,
+  };
 }
 
 export async function verifyLogin(email: string, password: string): Promise<User> {
@@ -50,26 +70,51 @@ export async function verifyLogin(email: string, password: string): Promise<User
 
   const user = userResult[0];
   const isValid = await bcrypt.compare(password, user.passwordHash);
+
   if (!isValid) {
     throw new Error("Invalid email or password");
   }
 
-  return user;
+  // Get user organization memberships
+  const organizationMemberships = await db.query.organizationMembers.findMany({
+    where: eq(organizationMembers.userId, user.id),
+    columns: {
+      organizationId: true,
+      role: true,
+    },
+  });
+
+  return {
+    ...user,
+    organizationMemberships: organizationMemberships.map(org => ({
+      id: org.organizationId,
+      role: org.role as Role,
+    })),
+    currentOrganization: null,
+    organizationRole: null,
+    organizationPermissions: null,
+    hasConnection: false,
+  };
 }
 
 export async function createUserSession({
   request,
   userId,
-  remember,
+  organizationId = null,
+  remember = false,
   redirectTo,
 }: {
   request: Request;
   userId: string;
-  remember: boolean;
+  organizationId?: string | null;
+  remember?: boolean;
   redirectTo: string;
 }) {
   const session = await getSession(request);
   session.set(USER_SESSION_KEY, userId);
+  if (organizationId) {
+    session.set(ORGANIZATION_SESSION_KEY, organizationId);
+  }
 
   return redirect(redirectTo, {
     headers: {
@@ -80,15 +125,23 @@ export async function createUserSession({
   });
 }
 
-export async function getUserSession(request: Request) {
+export async function getSession(request: Request) {
   return sessionStorage.getSession(request.headers.get("Cookie"));
+}
+
+export async function getUserSession(request: Request) {
+  const session = await getSession(request);
+  return {
+    userId: session.get(USER_SESSION_KEY),
+    organizationId: session.get(ORGANIZATION_SESSION_KEY),
+  };
 }
 
 export async function requireUserId(
   request: Request,
-  redirectTo: string = new URL(request.url).pathname
+  redirectTo: string = new URL(request.url).pathname,
 ) {
-  const session = await getUserSession(request);
+  const session = await getSession(request);
   const userId = session.get(USER_SESSION_KEY);
   if (!userId || typeof userId !== "string") {
     const searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
@@ -98,23 +151,88 @@ export async function requireUserId(
 }
 
 export async function getUser(request: Request): Promise<User | null> {
-  const userId = await getUserSession(request)
-    .then((session) => session.get(USER_SESSION_KEY));
+  const session = await getUserSession(request);
+  const userId = session.userId;
+  const organizationId = session.organizationId;
+  
+  if (!userId) return null;
 
-  if (!userId || typeof userId !== "string") {
-    return null;
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: {
+      id: true,
+      email: true,
+      name: true,
+      createdAt: true,
+      lastLogin: true,
+      passwordHash: true,
+      updatedAt: true,
+    },
+  });
+
+  if (!user) {
+    throw await logout(request);
   }
 
-  try {
-    const userResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    return userResult[0] || null;
-  } catch {
-    throw logout(request);
+  // Get user organization memberships
+  const organizationMemberships = await db.query.organizationMembers.findMany({
+    where: eq(organizationMembers.userId, user.id),
+    columns: {
+      organizationId: true,
+      role: true,
+    },
+  });
+
+  // Map the memberships to include the correct role type
+  const typedMemberships = organizationMemberships.map(membership => ({
+    id: membership.organizationId,
+    role: membership.role as Role
+  }));
+
+  // If no organization is selected but user has organizations, select the first one
+  if (!organizationId && typedMemberships.length > 0) {
+    const session = await getSession(request);
+    session.set(ORGANIZATION_SESSION_KEY, typedMemberships[0].id);
+    throw redirect(request.url, {
+      headers: {
+        'Set-Cookie': await sessionStorage.commitSession(session),
+      },
+    });
   }
+
+  // Get current organization details if selected
+  let organizationRole = null;
+  let organizationPermissions = null;
+  let hasConnection = false;
+
+  if (organizationId) {
+    [organizationRole, organizationPermissions, hasConnection] = await Promise.all([
+      getUserOrganizationRole(user.id, organizationId),
+      getUserOrganizationPermissions(user.id, organizationId),
+      db.query.databaseConnections.findFirst({
+        where: eq(databaseConnections.organizationId, organizationId),
+      }).then(Boolean)
+    ]);
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    createdAt: user.createdAt,
+    lastLogin: user.lastLogin,
+    passwordHash: user.passwordHash,
+    updatedAt: user.updatedAt,
+    organizationMemberships: typedMemberships,
+    currentOrganization: organizationId,
+    organizationRole,
+    organizationPermissions,
+    hasConnection
+  } satisfies User;
 }
 
 export async function logout(request: Request) {
-  const session = await getUserSession(request);
+  const session = await getSession(request);
   return redirect("/login", {
     headers: {
       "Set-Cookie": await sessionStorage.destroySession(session),
@@ -122,26 +240,21 @@ export async function logout(request: Request) {
   });
 }
 
-export async function getSession(request: Request) {
-  const cookie = request.headers.get("Cookie");
-  return sessionStorage.getSession(cookie);
-}
-
 export function validatePassword(password: string): string | null {
   if (password.length < 8) {
     return "Password must be at least 8 characters";
   }
 
-  if (!/\d/.test(password)) {
-    return "Password must contain at least one number";
+  if (!/[A-Z]/.test(password)) {
+    return "Password must contain at least one uppercase letter";
   }
 
   if (!/[a-z]/.test(password)) {
     return "Password must contain at least one lowercase letter";
   }
 
-  if (!/[A-Z]/.test(password)) {
-    return "Password must contain at least one uppercase letter";
+  if (!/[0-9]/.test(password)) {
+    return "Password must contain at least one number";
   }
 
   return null;
