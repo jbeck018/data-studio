@@ -6,7 +6,7 @@ const envSchema = z.object({
 
   // System database settings
   SYSTEM_DB_HOST: z.string().default('localhost'),
-  SYSTEM_DB_PORT: z.coerce.number().default(5432),
+  SYSTEM_DB_PORT: z.coerce.number().default(5555),
   SYSTEM_DB_USER: z.string().default('postgres'),
   SYSTEM_DB_PASSWORD: z.string().default('postgres'),
   SYSTEM_DB_NAME: z.string().default('postgres'),

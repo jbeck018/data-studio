@@ -1,8 +1,8 @@
 import { json, redirect } from "@remix-run/node";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useParams } from "@remix-run/react";
-import { requireUser } from "../../lib/auth/session.server";
-import { createDatabaseConnection } from "../../lib/connections/connections.server";
+import { requireUser } from "../lib/auth/session.server";
+import { createDatabaseConnection } from "../lib/connections/connections.server";
 import { z } from "zod";
 
 const CreateConnectionSchema = z.object({

@@ -1,6 +1,6 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
 import { Outlet } from "@remix-run/react";
-import { requireUser } from "../../lib/auth/session.server";
+import { requireUser } from "../lib/auth/session.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // This ensures all organization routes are protected

@@ -43,7 +43,7 @@ export async function action({ request }: ActionFunctionArgs) {
     const user = await requireUser(request);
     const queryEngine = new QueryEngine({
       host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
+      port: parseInt(process.env.DB_PORT || '5555'),
       database: process.env.DB_NAME || 'postgres',
       user: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASSWORD || '',
@@ -97,7 +97,7 @@ export default function QueryPage() {
     // Create a new QueryEngine instance with the connection config
     const queryEngine = new QueryEngine({
       host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
+      port: parseInt(process.env.DB_PORT || '5555'),
       database: process.env.DB_NAME || 'postgres',
       user: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASSWORD || '',

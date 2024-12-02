@@ -1,11 +1,11 @@
 import { json, redirect } from "@remix-run/node";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useLoaderData, Link } from "@remix-run/react";
-import { requireUser } from "../../lib/auth/session.server";
-import { db } from "../../lib/db/db.server";
-import { organizations, organizationMembers } from "../../lib/db/schema";
+import { requireUser } from "../lib/auth/session.server";
+import { db } from "../lib/db/db.server";
+import { organizations, organizationMembers } from "../lib/db/schema";
 import { eq } from "drizzle-orm";
-import { setCurrentOrganization } from "../../lib/auth/session.server";
+import { setCurrentOrganization } from "../lib/auth/session.server";
 
 interface LoaderData {
   organizations: Array<{

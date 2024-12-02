@@ -54,7 +54,7 @@ drizzle-server/
    Create a `.env` file in the `packages/server` directory:
    ```env
    HOST=localhost
-   DB_PORT=5432
+   DB_PORT=5555
    DB_USER=postgres
    DB_PASSWORD=postgres
    DB=postgres

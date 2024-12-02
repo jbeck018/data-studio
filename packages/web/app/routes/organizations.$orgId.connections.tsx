@@ -1,15 +1,15 @@
 import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
-import { requireUser } from "../../lib/auth/session.server";
-import { getOrganizationRole } from "../../lib/organizations/organizations.server";
-import { db } from "../../lib/db/db.server";
-import { databaseConnections } from "../../lib/db/schema/connections";
+import { requireUser } from "../lib/auth/session.server";
+import { getOrganizationRole } from "../lib/organizations/organizations.server";
+import { db } from "../lib/db/db.server";
+import { databaseConnections } from "../lib/db/schema/connections";
 import { eq } from "drizzle-orm";
-import { ConnectionManager } from "../../lib/db/connection-manager.server";
+import { ConnectionManager } from "../lib/db/connection-manager.server";
 import { z } from "zod";
 import { useState } from "react";
-import NewConnectionModal from "../../components/NewConnectionModal";
-import { testPostgresConnection } from "../../lib/db/test-connection.server";
+import NewConnectionModal from "../components/NewConnectionModal";
+import { testPostgresConnection } from "../lib/db/test-connection.server";
 
 const ConnectionSchema = z.object({
   name: z.string().min(1, "Name is required"),

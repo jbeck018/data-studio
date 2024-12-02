@@ -1,9 +1,9 @@
 import { json } from "@remix-run/node";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
-import { requireOrganization } from "../../lib/auth/session.server";
-import { db } from "../../lib/db/db.server";
-import { organizationMembers } from "../../lib/db/schema";
+import { requireOrganization } from "../lib/auth/session.server";
+import { db } from "../lib/db/db.server";
+import { organizationMembers } from "../lib/db/schema";
 import { eq } from "drizzle-orm";
 
 interface LoaderData {

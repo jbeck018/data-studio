@@ -1,7 +1,7 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import { requireUser } from "../../lib/auth/session.server";
-import { getOrganization } from "../../lib/organizations/organizations.server";
+import { requireUser } from "../lib/auth/session.server";
+import { getOrganization } from "../lib/organizations/organizations.server";
 import { z } from "zod";
 
 const ParamsSchema = z.object({

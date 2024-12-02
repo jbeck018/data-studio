@@ -76,7 +76,7 @@ export default function NewConnectionModal({ isOpen, onClose }: NewConnectionMod
                       type="number"
                       id="port"
                       name="port"
-                      defaultValue={5432}
+                      defaultValue={5555}
                       className="w-full px-3 py-2 border border-light-border dark:border-dark-border rounded-lg bg-light-bg-secondary dark:bg-dark-bg-tertiary focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />

@@ -1,7 +1,7 @@
 import { createServer } from 'http';
 import express from 'express';
 import { createRequestHandler } from '@remix-run/express';
-import { RealtimeServer } from './services/websocket.server';
+import { webSocketManager } from './services/websocket.server';
 
 const app = express();
 
@@ -12,10 +12,7 @@ app.use(express.static('public'));
 const httpServer = createServer(app);
 
 // Initialize WebSocket server
-const wsServer = new RealtimeServer(
-  httpServer,
-  process.env.DATABASE_URL || 'postgresql://localhost:5432/data_studio'
-);
+const wsServer = webSocketManager;
 
 // Set up Remix handler
 app.all(

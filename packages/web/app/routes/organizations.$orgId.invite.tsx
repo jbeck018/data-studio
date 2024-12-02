@@ -1,9 +1,9 @@
 import { json, redirect } from "@remix-run/node";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useParams } from "@remix-run/react";
-import { requireOrganizationRole } from "../../lib/auth/session.server";
-import { db } from "../../lib/db/db.server";
-import { users, organizationMembers } from "../../lib/db/schema";
+import { requireOrganizationRole } from "../lib/auth/session.server";
+import { db } from "../lib/db/db.server";
+import { users, organizationMembers } from "../lib/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 

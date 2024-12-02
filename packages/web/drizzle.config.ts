@@ -9,7 +9,7 @@ export default defineConfig({
   dialect: 'postgresql',
   dbCredentials: {
     host: process.env.SYSTEM_DB_HOST || 'localhost',
-    port: Number(process.env.SYSTEM_DB_PORT) || 5432,
+    port: Number(process.env.SYSTEM_DB_PORT) || 5555,
     user: process.env.SYSTEM_DB_USER || 'postgres',
     password: process.env.SYSTEM_DB_PASSWORD || 'postgres',
     database: process.env.SYSTEM_DB_NAME || 'postgres',

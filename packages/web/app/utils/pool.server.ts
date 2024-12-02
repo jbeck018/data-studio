@@ -6,7 +6,7 @@ export const pool = new Pool({
   host: process.env.PGHOST || 'localhost',
   database: process.env.PGDATABASE || 'postgres',
   password: process.env.PGPASSWORD || 'postgres',
-  port: parseInt(process.env.PGPORT || '5432'),
+  port: parseInt(process.env.PGPORT || '5555'),
 });
 
 // Add error handler

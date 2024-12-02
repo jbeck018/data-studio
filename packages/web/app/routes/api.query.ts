@@ -20,7 +20,7 @@ function convertToManagerConfig(connection: Awaited<ReturnType<typeof getConnect
 
   return {
     host: connection.config.host || '',
-    port: Number(connection.config.port) || 5432,
+    port: Number(connection.config.port) || 5555,
     database: connection.config.database || '',
     user: connection.config.username || '',
     password: connection.config.password || '',
