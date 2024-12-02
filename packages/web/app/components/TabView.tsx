@@ -1,5 +1,5 @@
 import { startCase } from "lodash-es";
-import { cn } from "~/utils/cn";
+import { cn } from "../utils/cn";
 
 interface Tab {
   id: string;

@@ -5,34 +5,43 @@ import {
   Controls,
   MiniMap,
   useReactFlow,
-  Node,
   NodeMouseHandler,
   EdgeMouseHandler,
-  Edge,
   XYPosition,
   NodeTypes,
+  Edge,
+  Node,
 } from '@xyflow/react';
-import type { SchemaVisualizationProps, TableNode, RelationshipEdge, TableColumn } from '~/types/schema';
+import type { ProcessedSchemaTable, SchemaVisualizationProps, TableNode as TableNodeType } from '../../types/schema';
 import { TableNode as CustomTableNode } from './TableNode';
 import { SchemaControls } from './SchemaControls';
-import { useSchemaLayout } from '~/hooks/useSchemaLayout';
+import { useSchemaLayout } from '../../hooks/useSchemaLayout';
 import {
   calculateDetailedNodeStatistics,
   calculateForceDirectedLayout,
   calculateCircularLayout,
   calculateTreeLayout,
   type LayoutType,
-} from '~/utils/schemaLayout';
-import { cn } from '~/utils/cn';
+} from '../../utils/schemaLayout';
+import { cn } from '../../utils/cn';
 
 const nodeTypes: NodeTypes = {
   table: CustomTableNode,
 } as const;
 
 interface TableNodeData {
+  id: string;
   label: string;
-  columns: TableColumn[];
+  columns: ProcessedSchemaTable['columns'];
+  [x: string]: unknown;
 }
+
+type CustomNode = Node<TableNodeData>;
+type CustomEdge = Edge<{
+  sourceColumn: string;
+  targetColumn: string;
+  relationType: 'one-to-one' | 'one-to-many' | 'many-to-many';
+}>;
 
 export function SchemaVisualization({
   schema,
@@ -41,17 +50,18 @@ export function SchemaVisualization({
   className,
 }: SchemaVisualizationProps) {
   const flowWrapper = useRef<HTMLDivElement>(null);
-  const [selectedNode, setSelectedNode] = useState<TableNode | null>(null);
+  const [selectedNode, setSelectedNode] = useState<CustomNode | null>(null);
   const [searchResults, setSearchResults] = useState<string[]>([]);
   const { fitView, setViewport } = useReactFlow();
 
-  const initialNodes: Node[] = useMemo(
+  const initialNodes: CustomNode[] = useMemo(
     () =>
       schema.tables.map((table, index) => ({
         id: table.name,
         type: 'table' as const,
         position: { x: index * 300, y: index * 100 } satisfies XYPosition,
         data: {
+          id: table.name,
           label: table.name,
           columns: table.columns,
         },
@@ -59,7 +69,7 @@ export function SchemaVisualization({
     [schema.tables],
   );
 
-  const initialEdges: Edge<RelationshipEdge['data']>[] = useMemo(
+  const initialEdges = useMemo(
     () =>
       schema.relationships.map((rel) => ({
         id: `${rel.sourceTable}-${rel.sourceColumn}-${rel.targetTable}-${rel.targetColumn}`,
@@ -68,14 +78,16 @@ export function SchemaVisualization({
         type: 'smoothstep',
         animated: true,
         data: {
+          sourceTable: rel.sourceTable,
           sourceColumn: rel.sourceColumn,
+          targetTable: rel.targetTable,
           targetColumn: rel.targetColumn,
-          relationType: rel.type,
+          type: rel.type,
         },
         label: `${rel.sourceColumn} → ${rel.targetColumn}`,
         labelStyle: { fill: 'var(--text-secondary)' },
         style: { stroke: 'var(--primary-500)' },
-      })),
+      })) as unknown as CustomEdge[],
     [schema.relationships],
   );
 
@@ -91,7 +103,7 @@ export function SchemaVisualization({
   } = useSchemaLayout({
     initialNodes,
     initialEdges,
-  } as any);
+  });
 
   const handleLayoutChange = useCallback((type: LayoutType) => {
     let layoutedNodes;
@@ -167,14 +179,13 @@ export function SchemaVisualization({
 
   const handleNodeClick: NodeMouseHandler = useCallback(
     (_, node) => {
-      const tableNode = node;
-      setSelectedNode(tableNode as any);
+      setSelectedNode(node as CustomNode);
       const stats = calculateDetailedNodeStatistics(
-        tableNode as any,
-        edges as RelationshipEdge[],
-        nodes as TableNode[]
+        node as CustomNode,
+        edges,
+        nodes
       );
-      onNodeClick?.(tableNode as any);
+      onNodeClick?.(node as CustomNode);
       console.log('Node statistics:', stats);
     },
     [edges, nodes, onNodeClick],
@@ -198,14 +209,14 @@ export function SchemaVisualization({
 
   const handleEdgeClick: EdgeMouseHandler = useCallback(
     (_, edge) => {
-      onEdgeClick?.(edge as unknown as RelationshipEdge);
+      onEdgeClick?.(edge as CustomEdge);
     },
     [onEdgeClick],
   );
 
-  const handleNodeDragStop = useCallback(
+  const handleNodeDragStop: NodeMouseHandler = useCallback(
     (_, node) => {
-      onNodeDragStop(node as any, nodes);
+      onNodeDragStop(node as CustomNode, nodes);
     },
     [nodes, onNodeDragStop],
   );
@@ -225,8 +236,8 @@ export function SchemaVisualization({
         onExport={handleExport}
         statistics={selectedNode ? calculateDetailedNodeStatistics(
           selectedNode,
-          edges as RelationshipEdge[],
-          nodes as TableNode[]
+          edges,
+          nodes
         ) : undefined}
       />
       

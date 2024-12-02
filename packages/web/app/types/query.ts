@@ -1,7 +1,10 @@
+import type { ConnectionConfig } from '../lib/db/connection-manager.server';
+
 export interface QueryOptions {
   connectionId: string;
   organizationId: string;
   userId: string;
+  config: ConnectionConfig;
   timeout?: number;
   maxRows?: number;
 }
@@ -57,6 +60,20 @@ export type QueryErrorCode =
   | 'EXECUTION_ERROR'
   | 'TIMEOUT_ERROR'
   | 'CONNECTION_ERROR';
+
+export interface TableSchema {
+  table_name: string;
+  connectionId: string;
+  columns: Array<{
+    column_name: string;
+    data_type: string;
+    is_nullable: string;
+    column_default: string | null;
+    constraint_type?: 'PRIMARY KEY' | 'FOREIGN KEY';
+    foreign_table_name?: string;
+    foreign_column_name?: string;
+  }>;
+}
 
 export class QueryError extends Error {
   constructor(

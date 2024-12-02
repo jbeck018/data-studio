@@ -1,10 +1,10 @@
 import { json, type ActionFunctionArgs } from '@remix-run/node';
 import { z } from 'zod';
-import { db } from '~/lib/db/db.server';
-import { databaseConnections } from '~/lib/db/schema';
-import { requireUser } from '~/lib/auth/session.server';
+import { db } from '../lib/db/db.server';
+import { databaseConnections } from '../lib/db/schema';
+import { requireUser } from '../lib/auth/session.server';
 import { eq } from 'drizzle-orm';
-import { ConnectionManager } from '~/lib/db/connection-manager.server';
+import { ConnectionManager } from '../lib/db/connection-manager.server';
 
 const connectionSchema = z.object({
   name: z.string().min(1),

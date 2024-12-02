@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { format } from "sql-formatter";
-import type { QueryResult, TableSchema } from "~/types";
-import { PageContainer } from "~/components/PageContainer";
-import { EmptyState } from "~/components/EmptyState";
-import { LoadingSpinner } from "~/components/LoadingSpinner";
-import { Alert } from "~/components/Alert";
-import { json, type ActionFunctionArgs } from "@remix-run/node";
-import { useActionData, Form, useNavigation, useLoaderData } from "@remix-run/react";
-import { QueryEngine } from "~/lib/db/query-engine.server";
-import { requireUser } from "~/lib/auth/session.server";
-import { SQLEditor } from "~/components/SQLEditor";
-import { fetchSchema } from "~/utils/api.server";
-import { StreamingQueryResults } from "~/components/StreamingQueryResults";
+import type { QueryResult, TableSchema } from "../types";
+import { PageContainer } from "../components/PageContainer";
+import { LoadingSpinner } from "../components/LoadingSpinner";
+import { Alert } from "../components/Alert";
+import { json, type ActionFunctionArgs, type SerializeFrom } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
+import { QueryEngine } from "../lib/db/query-engine.server";
+import { requireUser } from "../lib/auth/session.server";
+import { SQLEditor } from "../components/SQLEditor";
+import { fetchSchema } from "../utils/api.server";
+import { StreamingQueryResults } from "../components/StreamingQueryResults";
 
 interface ActionData {
   result?: QueryResult;
@@ -19,7 +18,7 @@ interface ActionData {
 }
 
 interface LoaderData {
-  schema: TableSchema[];
+  schema: SerializeFrom<TableSchema>[];
 }
 
 export async function loader() {
@@ -42,10 +41,17 @@ export async function action({ request }: ActionFunctionArgs) {
 
   try {
     const user = await requireUser(request);
-    const queryEngine = QueryEngine.getInstance();
+    const queryEngine = new QueryEngine({
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      database: process.env.DB_NAME || 'postgres',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || '',
+    });
     const result = await queryEngine.executeQuery(query, {
-      connectionId,
       userId: user.id,
+      connectionId,
+      organizationId: user.currentOrganization?.id,
     });
     return json<ActionData>({ result });
   } catch (error) {
@@ -88,6 +94,26 @@ export default function QueryPage() {
     event.preventDefault();
     if (!query.trim()) return;
     setIsExecuting(true);
+    // Create a new QueryEngine instance with the connection config
+    const queryEngine = new QueryEngine({
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      database: process.env.DB_NAME || 'postgres',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || '',
+    });
+    try {
+      const result = await queryEngine.executeQuery(query, {
+        userId: 'user-id', // Replace with actual user ID
+        connectionId: schema[0]['connectionId' as keyof TableSchema] as string,
+        organizationId: 'organization-id', // Replace with actual organization ID
+      });
+      // Handle query result
+    } catch (error) {
+      console.error('Error executing query:', error);
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   const renderError = () => {
@@ -156,11 +182,18 @@ export default function QueryPage() {
 
           {renderError()}
 
-          {isExecuting && (
+          {isExecuting && schema.length > 0 && (
             <StreamingQueryResults
               sql={query}
-              connectionId={schema.connectionId}
+              connectionId={schema[0]['connectionId' as keyof TableSchema] as string}
               onComplete={handleQueryComplete}
+            />
+          )}
+          {isExecuting && schema.length === 0 && (
+            <Alert
+              type="error"
+              title="No Connection"
+              message="Please select a database connection before executing queries."
             />
           )}
         </div>

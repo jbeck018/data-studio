@@ -22,6 +22,34 @@
       "when": 1732991750084,
       "tag": "0002_nebulous_runaways",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1733086668815,
+      "tag": "0003_early_nova",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1733087613315,
+      "tag": "0004_lively_wong",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1733098377608,
+      "tag": "0005_fearless_naoko",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1733100254917,
+      "tag": "0006_chunky_ser_duncan",
+      "breakpoints": true
     }
   ]
 }

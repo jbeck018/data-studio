@@ -1,4 +1,4 @@
-import type { TableDataResponse, TableSchema, QueryResult } from '~/types';
+import type { TableDataResponse, TableSchema, QueryResult } from '../types';
 
 export interface Api {
   fetchSchema(): Promise<TableSchema[]>;

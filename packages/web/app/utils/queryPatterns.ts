@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import type { TableNode, RelationshipEdge } from '~/types/schema';
+import type { TableNode, RelationshipEdge } from '../types/schema';
 import type { SchemaInfo } from './pgAI';
 
 export interface CommonQueryPattern {

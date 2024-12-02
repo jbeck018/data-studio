@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ChartData } from './ChartComponent';
-import type { SavedChart } from '~/utils/chartStorage';
-import { saveChart, updateChart } from '~/utils/chartStorage';
+import type { SavedChart } from '../../utils/chartStorage';
+import { saveChart, updateChart } from '../../utils/chartStorage';
 
 interface ChartSaveModalProps {
   chart: ChartData;

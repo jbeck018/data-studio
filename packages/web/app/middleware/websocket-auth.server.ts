@@ -1,8 +1,8 @@
 import type { WebSocket, WebSocketServer } from 'ws';
-import { getUserSession } from '~/lib/auth/session.server';
+import { getUserSession } from '../lib/auth/session.server';
 import type { IncomingMessage } from 'http';
 import { parse } from 'cookie';
-import type { AuthenticatedWebSocket } from '~/types/websocket';
+import type { AuthenticatedWebSocket } from '../types/websocket';
 
 export async function authenticateWebSocket(
   wss: WebSocketServer,

@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { useStreamingQuery } from '~/hooks/useStreamingQuery';
+import { useStreamingQuery } from '../hooks/useStreamingQuery';
 import { LoadingSpinner } from './LoadingSpinner';
 import { Alert } from './Alert';
 import { EmptyState } from './EmptyState';
-import { cn } from '~/utils/cn';
+import { cn } from '../utils/cn';
 import { VisualizationManager } from './DataVisualization';
 
 interface StreamingQueryResultsProps {
   sql: string;
-  connectionId: string;
+  connectionId?: string;
   onComplete?: () => void;
   className?: string;
 }
@@ -19,6 +19,17 @@ export function StreamingQueryResults({
   onComplete,
   className,
 }: StreamingQueryResultsProps) {
+  // Early return if no connectionId is provided
+  if (!connectionId) {
+    return (
+      <Alert
+        type="error"
+        title="Connection Error"
+        message="No connection ID provided. Please select a valid database connection."
+      />
+    );
+  }
+
   const tableRef = useRef<HTMLDivElement>(null);
   const [showVisualization, setShowVisualization] = useState(false);
   const {

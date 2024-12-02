@@ -49,7 +49,7 @@ const wsServer = new RealtimeServer(httpServer, process.env.DATABASE_URL);
 ### Client Usage
 
 ```typescript
-import { useWebSocket } from '~/hooks/useWebSocket';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 function MyComponent() {
   const { sendNotification } = useWebSocket('my-channel', (payload) => {

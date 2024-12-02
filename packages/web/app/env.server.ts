@@ -9,7 +9,7 @@ const envSchema = z.object({
   SYSTEM_DB_PORT: z.coerce.number().default(5432),
   SYSTEM_DB_USER: z.string().default('postgres'),
   SYSTEM_DB_PASSWORD: z.string().default('postgres'),
-  SYSTEM_DB_NAME: z.string().default('data_studio_system'),
+  SYSTEM_DB_NAME: z.string().default('postgres'),
 
   // Session configuration
   SESSION_SECRET: z.string().min(32).default('at-least-32-characters-long-session-secret'),

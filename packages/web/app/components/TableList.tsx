@@ -1,5 +1,5 @@
 import { Link } from "@remix-run/react";
-import type { TableSchema } from "~/types";
+import type { TableSchema } from "../types";
 import { startCase, capitalize } from "lodash-es";
 
 interface TableListProps {

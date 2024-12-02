@@ -1,6 +1,6 @@
 import { startCase } from "lodash-es";
 import { useCallback, useMemo, useState } from "react";
-import type { Column } from "~/types";
+import type { Column } from "../types";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -9,7 +9,7 @@ import {
   type SortingState,
   flexRender,
 } from '@tanstack/react-table';
-import { cn } from "~/utils/cn";
+import { cn } from "../utils/cn";
 
 interface DataViewProps {
   columns: Column[];

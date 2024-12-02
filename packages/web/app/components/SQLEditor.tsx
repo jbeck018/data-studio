@@ -1,13 +1,13 @@
 import { sql } from '@codemirror/lang-sql';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { useTheme } from '~/hooks/useTheme';
+import { useTheme } from '../hooks/useTheme';
 import { EditorView, ViewUpdate } from '@codemirror/view';
 import { Extension, Compartment, StateEffect } from '@codemirror/state';
 import { useCallback, useEffect, useRef, useMemo } from 'react';
 import { basicSetup } from 'codemirror';
 import { linter, lintGutter, Diagnostic } from '@codemirror/lint';
 import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
-import type { TableSchema } from '~/types';
+import type { TableSchema } from '../types';
 
 interface SQLEditorProps {
   value: string;

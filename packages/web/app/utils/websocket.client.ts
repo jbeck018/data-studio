@@ -1,4 +1,4 @@
-import type { WebSocketMessage, WebSocketClientOptions } from '~/types/websocket';
+import type { WebSocketMessage, WebSocketClientOptions } from '../types/websocket';
 
 export class WebSocketClient {
   private ws: WebSocket | null = null;

@@ -1,24 +1,20 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData, useSearchParams } from "@remix-run/react";
-import { TabView } from "~/components/TabView";
-import { DataView } from "~/components/DataView";
-import { EmptyState } from "~/components/EmptyState";
-import { RowDetailsSidebar } from "~/components/RowDetailsSidebar";
+import { TabView } from "../components/TabView";
+import { DataView } from "../components/DataView";
+import { EmptyState } from "../components/EmptyState";
+import { RowDetailsSidebar } from "../components/RowDetailsSidebar";
 import { useCallback, useState } from "react";
 import { isNumber, startCase } from "lodash-es";
-import { useClient } from "~/hooks/useClient";
-import type { TableDataResponse, Column } from "~/types";
-import { fetchTableData } from "~/utils/api.server";
-import { fetchSchema } from "~/utils/api.server";
+import { useClient } from "../hooks/useClient";
+import type { TableDataResponse, Column } from "../types";
+import { fetchTableData } from "../utils/api.server";
+import { fetchSchema } from "../utils/api.server";
+import { useTableUpdates } from "../hooks/useTableUpdates";
 
 interface LoaderData {
   tableName: string;
-  data: {
-    data: Record<string, unknown>[];
-    totalRows: number;
-    page?: number;
-    pageSize?: number;
-  };
+  data: TableDataResponse;
   columns: Column[];
 }
 
@@ -48,12 +44,13 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 }
 
 export default function TablePage() {
-  const { tableName, data, columns } = useLoaderData<LoaderData>();
+  const { tableName, data: initialData, columns } = useLoaderData<LoaderData>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const isClient = useClient();
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const client = useClient();
+
+  // Use real-time updates
+  const liveData = useTableUpdates(tableName, initialData);
 
   const activeTab = searchParams.get("tab") || "content";
   const sortBy = searchParams.get("sortBy") || undefined;
@@ -78,9 +75,6 @@ export default function TablePage() {
 
   const handleEdit = useCallback(async (rowIndex: number, newData: Record<string, unknown>) => {
     if (!tableName) return;
-
-    setIsLoading(true);
-    setError(null);
     try {
       const response = await fetch(`/api/tables/${tableName}/rows/${rowIndex}`, {
         method: 'PUT',
@@ -94,18 +88,13 @@ export default function TablePage() {
         throw new Error(`Failed to update row: ${response.statusText}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update row');
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   }, [tableName]);
 
   const handleDelete = useCallback(async (rowIndex: number) => {
     if (!tableName) return;
 
-    setIsLoading(true);
-    setError(null);
     try {
       const response = await fetch(`/api/tables/${tableName}/rows/${rowIndex}`, {
         method: 'DELETE',
@@ -119,10 +108,7 @@ export default function TablePage() {
         setSelectedRow(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete row');
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   }, [tableName, selectedRow]);
 
@@ -141,13 +127,13 @@ export default function TablePage() {
   ];
 
   const renderTabContent = () => {
-    if (!isClient) {
+    if (!client) {
       return null;
     }
 
     switch (activeTab) {
       case "content":
-        if (data.data.length === 0) {
+        if (liveData.data.length === 0) {
           return (
             <EmptyState
               type="table"
@@ -159,7 +145,7 @@ export default function TablePage() {
         return (
           <DataView
             columns={columns}
-            rows={data.data}
+            rows={liveData.data}
             sortBy={sortBy}
             sortOrder={sortOrder}
             onSort={handleSort}
@@ -169,8 +155,8 @@ export default function TablePage() {
             onDelete={handleDelete}
             selectedRow={isNumber(selectedRow) ? selectedRow : undefined}
             onRowSelect={setSelectedRow}
-            isLoading={isLoading}
-            error={error || undefined}
+            isLoading={false}
+            error={undefined}
           />
         );
       case "structure":
@@ -235,7 +221,7 @@ export default function TablePage() {
             {renderTabContent()}
           </div>
           <RowDetailsSidebar
-            row={selectedRow !== null ? data.data[selectedRow] : null}
+            row={selectedRow !== null ? liveData.data[selectedRow] : null}
             columns={columns}
             isOpen={selectedRow !== null}
             onClose={() => setSelectedRow(null)}

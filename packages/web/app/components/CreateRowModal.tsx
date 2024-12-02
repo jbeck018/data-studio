@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { TableSchema } from "~/types";
+import type { TableSchema } from "../types";
 import { Button } from "./Button";
 
 interface CreateRowModalProps {

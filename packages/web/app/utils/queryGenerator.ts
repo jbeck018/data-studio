@@ -1,5 +1,5 @@
-import type { TableNode, RelationshipEdge } from '~/types/schema';
-import type { PgAI, SchemaInfo, QueryPattern } from './pgAI';
+import type { TableNode, RelationshipEdge } from '../types/schema';
+import type { PgAI } from './pgAI';
 import { QueryTemplateProcessor, TemplateContext, ExtractedValues } from './queryPatterns';
 
 export interface QueryContext {

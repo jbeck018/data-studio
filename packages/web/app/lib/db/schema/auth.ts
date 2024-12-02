@@ -1,17 +1,18 @@
 import { text, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
-import { createId } from "@paralleldrive/cuid2";
+import { v4 as uuidv4 } from "uuid";
 
 export const users = pgTable("users", {
-  id: uuid("id").primaryKey().$defaultFn(() => createId()),
+  id: uuid("id").primaryKey().$defaultFn(() => uuidv4()),
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   hashedPassword: text("hashed_password").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  lastLogin: timestamp("last_login"),
 });
 
 export const sessions = pgTable("sessions", {
-  id: uuid("id").primaryKey().$defaultFn(() => createId()),
+  id: uuid("id").primaryKey().$defaultFn(() => uuidv4()),
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),

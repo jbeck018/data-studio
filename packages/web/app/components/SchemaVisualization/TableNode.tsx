@@ -1,11 +1,11 @@
-import { Handle, Position } from '@reactflow/core';
-import type { TableColumn } from '~/types/schema';
-import { cn } from '~/utils/cn';
+import { Handle, Position } from '@xyflow/react';
+import type { ProcessedSchemaTable } from '../../types/schema';
+import { cn } from '../../utils/cn';
 
 interface TableNodeProps {
   data: {
     label: string;
-    columns: TableColumn[];
+    columns: ProcessedSchemaTable['columns'];
   };
   selected?: boolean;
 }

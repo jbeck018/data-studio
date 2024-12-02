@@ -1,5 +1,5 @@
 import { Form, Link, useLocation } from "@remix-run/react";
-import { useTheme } from "~/utils/theme";
+import { useTheme } from "../utils/theme";
 import {
   TableCellsIcon as TableIcon,
   CircleStackIcon as DatabaseIcon,
@@ -47,6 +47,7 @@ export default function Layout({ children, user }: LayoutProps) {
         <div className="flex h-full flex-col rounded-2xl bg-light-bg-primary dark:bg-dark-bg-secondary shadow-lg">
           <div className="flex flex-1 flex-col overflow-y-auto pt-5 pb-4">
             <div className="flex flex-shrink-0 items-center px-4">
+              <img src="/assets/logo.svg" alt="Data Studio" className="h-8 w-8 mr-2" />
               <h1 className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary">Data Studio</h1>
             </div>
             <nav className="mt-5 flex-1 space-y-1 px-2">

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { WebSocketMessage, WebSocketClientMessage } from '~/types/websocket';
+import type { WebSocketMessage, WebSocketClientMessage } from '../types/websocket';
 
 interface UseWebSocketOptions {
   onMessage?: (message: WebSocketMessage) => void;
@@ -89,5 +89,6 @@ export function useWebSocket({ onMessage, onError, debug = false }: UseWebSocket
   return {
     isConnected,
     sendMessage,
+    socket: ws.current,
   };
 }

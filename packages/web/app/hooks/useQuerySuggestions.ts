@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { TableNode, RelationshipEdge } from '~/types/schema';
+import type { TableNode, RelationshipEdge } from '../types/schema';
 import type { Pool } from 'pg';
-import { createPgAI } from '~/utils/pgAI';
-import { createQueryGenerator } from '~/utils/queryGenerator';
+import { createPgAI } from '../utils/pgAI';
+import { createQueryGenerator } from '../utils/queryGenerator';
 
 interface UseQuerySuggestionsOptions {
   pool: Pool;

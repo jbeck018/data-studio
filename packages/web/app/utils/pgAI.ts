@@ -1,5 +1,5 @@
-import type { Pool, QueryResult } from 'pg';
-import type { TableNode, RelationshipEdge, TableColumn } from '~/types/schema';
+import type { Pool } from 'pg';
+import type { ProcessedSchemaTable } from '../types/schema';
 
 export interface SchemaInfo {
   table_name: string;
@@ -27,7 +27,30 @@ const DEFAULT_CONFIG: Required<PgAIConfig> = {
   similarityThreshold: 0.7,
 };
 
-type RelationType = 'one-to-one' | 'one-to-many' | 'many-to-many';
+export type RelationType = 'one-to-one' | 'one-to-many' | 'many-to-many';
+
+export interface TableInfo {
+  name: string;
+  columns: Array<{
+    name: string;
+    type: string;
+    nullable: boolean;
+    isPrimaryKey: boolean;
+    isForeignKey: boolean;
+    references?: {
+      table: string;
+      column: string;
+    };
+  }>;
+}
+
+export interface RelationshipInfo {
+  sourceTable: string;
+  sourceColumn: string;
+  targetTable: string;
+  targetColumn: string;
+  relationType: RelationType;
+}
 
 /**
  * Manages interactions with pg_ai extension for embeddings and vector search
@@ -97,8 +120,8 @@ export class PgAI {
    * Updates schema embeddings based on current database schema
    */
   public async updateSchemaEmbeddings(
-    tables: TableNode[],
-    relationships: RelationshipEdge[]
+    tables: ProcessedSchemaTable[],
+    relationships: RelationshipInfo[]
   ): Promise<void> {
     const client = await this.pool.connect();
     try {
@@ -113,38 +136,33 @@ export class PgAI {
         const tableDesc = this.generateTableDescription(table);
         await client.query(
           'INSERT INTO schema_embeddings (table_name, description, embedding) VALUES ($1, $2, pg_ai_embed($2))',
-          [table.data.label, tableDesc]
+          [table.name, tableDesc]
         );
 
         // Column description embeddings
-        for (const column of table.data.columns) {
-          const columnDesc = this.generateColumnDescription(table.data.label, column);
+        for (const column of table.columns) {
+          const columnDesc = this.generateColumnDescription(table.name, column);
           await client.query(
             'INSERT INTO schema_embeddings (table_name, column_name, description, embedding) VALUES ($1, $2, $3, pg_ai_embed($3))',
-            [table.data.label, column.name, columnDesc]
+            [table.name, column.name, columnDesc]
           );
         }
       }
 
       // Generate and store embeddings for relationships
       for (const rel of relationships) {
-        const sourceTable = tables.find(t => t.id === rel.source);
-        const targetTable = tables.find(t => t.id === rel.target);
+        const relDesc = this.generateRelationshipDescription(
+          rel.sourceTable,
+          rel.sourceColumn,
+          rel.targetTable,
+          rel.targetColumn,
+          rel.relationType
+        );
         
-        if (sourceTable && targetTable) {
-          const relDesc = this.generateRelationshipDescription(
-            sourceTable.data.label,
-            rel.data.sourceColumn,
-            targetTable.data.label,
-            rel.data.targetColumn,
-            rel.data.relationType
-          );
-          
-          await client.query(
-            'INSERT INTO schema_embeddings (table_name, description, embedding) VALUES ($1, $2, pg_ai_embed($2))',
-            [`${sourceTable.data.label}_${targetTable.data.label}_rel`, relDesc]
-          );
-        }
+        await client.query(
+          'INSERT INTO schema_embeddings (table_name, description, embedding) VALUES ($1, $2, pg_ai_embed($2))',
+          [`${rel.sourceTable}_${rel.targetTable}_rel`, relDesc]
+        );
       }
 
       await client.query('COMMIT');
@@ -206,15 +224,18 @@ export class PgAI {
     );
   }
 
-  private generateTableDescription(table: TableNode): string {
-    const columnList = table.data.columns
+  private generateTableDescription(table: ProcessedSchemaTable): string {
+    const columnList = table.columns
       .map(col => `${col.name} (${col.type}${col.isPrimaryKey ? ', primary key' : ''}${col.isForeignKey ? ', foreign key' : ''})`)
       .join(', ');
     
-    return `Table ${table.data.label} with columns: ${columnList}`;
+    return `Table ${table.name} with columns: ${columnList}`;
   }
 
-  private generateColumnDescription(tableName: string, column: TableColumn): string {
+  private generateColumnDescription(
+    tableName: string, 
+    column: ProcessedSchemaTable['columns'][0]
+  ): string {
     let desc = `Column ${column.name} in table ${tableName} of type ${column.type}`;
     if (column.isPrimaryKey) desc += ', serves as the primary key';
     if (column.isForeignKey && column.references) {

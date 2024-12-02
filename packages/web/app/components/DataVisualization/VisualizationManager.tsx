@@ -3,15 +3,16 @@ import type { ChartType, ChartData } from './ChartComponent';
 import { ChartComponent } from './ChartComponent';
 import { ChartCustomizer } from './ChartCustomizer';
 import { ChartSaveModal } from './ChartSaveModal';
-import type { SavedChart } from '~/utils/chartStorage';
-import { loadSavedCharts, deleteChart } from '~/utils/chartStorage';
+import { SmartVisualization, type DataInsight } from './SmartVisualization';
+import type { SavedChart } from '../../utils/chartStorage';
+import { loadSavedCharts, deleteChart } from '../../utils/chartStorage';
 
-interface Column {
+export interface Column {
   name: string;
   type: string;
 }
 
-interface QueryResult {
+export interface QueryResult {
   columns: Column[];
   rows: Record<string, any>[];
 }
@@ -224,7 +225,43 @@ export function VisualizationManager({ queryResult, queryId }: VisualizationMana
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
+      {/* Smart Insights */}
+      <div>
+        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+          Smart Insights
+        </h2>
+        <SmartVisualization 
+          queryResult={queryResult}
+          onInsightFound={(insight: DataInsight) => {
+            // Optionally handle insights, e.g., save them or show notifications
+            console.log('Found insight:', insight);
+          }}
+        />
+      </div>
+
+      {/* Manual Visualization */}
+      <div>
+        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+          Custom Visualizations
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {suggestions.map((chartData, index) => (
+            <button
+              key={`${chartData.chartType}-${index}`}
+              onClick={() => handleChartSelect(chartData)}
+              className={`p-4 rounded-lg border transition-colors ${
+                selectedChart === chartData
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  : 'border-light-border dark:border-dark-border hover:bg-light-bg-secondary dark:hover:bg-dark-bg-secondary'
+              }`}
+            >
+              <ChartComponent data={chartData} height={200} />
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <div className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
           {suggestions.length} suggested visualizations
@@ -314,22 +351,6 @@ export function VisualizationManager({ queryResult, queryId }: VisualizationMana
           </div>
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {suggestions.map((chartData, index) => (
-          <button
-            key={`${chartData.chartType}-${index}`}
-            onClick={() => handleChartSelect(chartData)}
-            className={`p-4 rounded-lg border transition-colors ${
-              selectedChart === chartData
-                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                : 'border-light-border dark:border-dark-border hover:bg-light-bg-secondary dark:hover:bg-dark-bg-secondary'
-            }`}
-          >
-            <ChartComponent data={chartData} height={200} />
-          </button>
-        ))}
-      </div>
 
       {showSaveModal && selectedChart && (
         <ChartSaveModal

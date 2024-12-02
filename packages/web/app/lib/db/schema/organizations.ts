@@ -1,17 +1,18 @@
 import { text, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
-import { createId } from "@paralleldrive/cuid2";
+import { v4 as uuidv4 } from "uuid";
 import { users } from "./auth";
 
 export const organizations = pgTable("organizations", {
-  id: uuid("id").primaryKey().$defaultFn(() => createId()),
+  id: uuid("id").primaryKey().$defaultFn(() => uuidv4()),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
+  description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const organizationMembers = pgTable("organization_members", {
-  id: uuid("id").primaryKey().$defaultFn(() => createId()),
+  id: uuid("id").primaryKey().$defaultFn(() => uuidv4()),
   organizationId: uuid("organization_id")
     .notNull()
     .references(() => organizations.id, { onDelete: "cascade" }),

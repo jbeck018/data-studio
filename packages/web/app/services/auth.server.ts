@@ -1,14 +1,14 @@
 import { createCookieSessionStorage, redirect } from "@remix-run/node";
 import bcrypt from "bcryptjs";
-import { db } from "~/lib/db/db.server";
-import { users, organizationMembers, databaseConnections } from "~/lib/db/schema";
+import { db } from "../lib/db/db.server";
+import { users, organizationMembers, databaseConnections } from "../lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { InferSelectModel } from 'drizzle-orm';
-import { getUserOrganizationRole, getUserOrganizationPermissions, Role } from "~/lib/auth/rbac.server";
+import { getUserOrganizationRole, getUserOrganizationPermissions, Role } from "../lib/auth/rbac.server";
 
 export type User = InferSelectModel<typeof users> & {
   organizationMemberships: Array<{
-    id: string;
+    organizationId: string;
     role: Role;
   }>;
   currentOrganization: string | null;
@@ -32,24 +32,37 @@ const USER_SESSION_KEY = "userId";
 const ORGANIZATION_SESSION_KEY = "organizationId";
 const SESSION_EXPIRY = 60 * 60 * 24 * 30; // 30 days
 
-export async function createUser(email: string, password: string): Promise<User> {
-  const hashedPassword = await bcrypt.hash(password, 10);
-  
-  const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+interface CreateUserInput {
+  email: string;
+  password: string;
+  name: string;
+}
 
-  if (existingUser.length > 0) {
-    throw new Error("User already exists");
+interface UpdateUserInput {
+  email?: string;
+  name?: string;
+  password?: string;
+  currentPassword?: string;
+}
+
+export async function createUser({ email, password, name }: CreateUserInput): Promise<User> {
+  const existingUser = await db.query.users.findFirst({
+    where: eq(users.email, email),
+  });
+
+  if (existingUser) {
+    throw new Error("A user with this email already exists");
   }
 
-  const result = await db.insert(users).values({
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const [user] = await db.insert(users).values({
     email,
-    name: email.split('@')[0], // Default name from email
+    name,
     passwordHash: hashedPassword,
     createdAt: new Date(),
     updatedAt: new Date(),
   }).returning();
-
-  const user = result[0];
 
   return {
     ...user,
@@ -62,13 +75,14 @@ export async function createUser(email: string, password: string): Promise<User>
 }
 
 export async function verifyLogin(email: string, password: string): Promise<User> {
-  const userResult = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const user = await db.query.users.findFirst({
+    where: eq(users.email, email),
+  });
 
-  if (!userResult.length) {
+  if (!user) {
     throw new Error("Invalid email or password");
   }
 
-  const user = userResult[0];
   const isValid = await bcrypt.compare(password, user.passwordHash);
 
   if (!isValid) {
@@ -87,7 +101,7 @@ export async function verifyLogin(email: string, password: string): Promise<User
   return {
     ...user,
     organizationMemberships: organizationMemberships.map(org => ({
-      id: org.organizationId,
+      organizationId: org.organizationId,
       role: org.role as Role,
     })),
     currentOrganization: null,
@@ -185,14 +199,14 @@ export async function getUser(request: Request): Promise<User | null> {
 
   // Map the memberships to include the correct role type
   const typedMemberships = organizationMemberships.map(membership => ({
-    id: membership.organizationId,
+    organizationId: membership.organizationId,
     role: membership.role as Role
   }));
 
   // If no organization is selected but user has organizations, select the first one
   if (!organizationId && typedMemberships.length > 0) {
     const session = await getSession(request);
-    session.set(ORGANIZATION_SESSION_KEY, typedMemberships[0].id);
+    session.set(ORGANIZATION_SESSION_KEY, typedMemberships[0].organizationId);
     throw redirect(request.url, {
       headers: {
         'Set-Cookie': await sessionStorage.commitSession(session),
@@ -258,4 +272,67 @@ export function validatePassword(password: string): string | null {
   }
 
   return null;
+}
+
+export async function updateUser(userId: string, input: UpdateUserInput): Promise<User> {
+  const userResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+
+  if (!userResult.length) {
+    throw new Error("User not found");
+  }
+
+  const user = userResult[0];
+  const updates: Partial<typeof user> = {
+    updatedAt: new Date(),
+  };
+
+  if (input.email) {
+    updates.email = input.email;
+  }
+
+  if (input.name) {
+    updates.name = input.name;
+  }
+
+  if (input.password) {
+    if (!input.currentPassword) {
+      throw new Error("Current password is required to change password");
+    }
+
+    const isValid = await bcrypt.compare(input.currentPassword, user.passwordHash);
+    if (!isValid) {
+      throw new Error("Current password is incorrect");
+    }
+
+    updates.passwordHash = await bcrypt.hash(input.password, 10);
+  }
+
+  const result = await db
+    .update(users)
+    .set(updates)
+    .where(eq(users.id, userId))
+    .returning();
+
+  const updatedUser = result[0];
+
+  // Get user organization memberships
+  const organizationMemberships = await db.query.organizationMembers.findMany({
+    where: eq(organizationMembers.userId, updatedUser.id),
+    columns: {
+      organizationId: true,
+      role: true,
+    },
+  });
+
+  return {
+    ...updatedUser,
+    organizationMemberships: organizationMemberships.map(org => ({
+      organizationId: org.organizationId,
+      role: org.role as Role,
+    })),
+    currentOrganization: null,
+    organizationRole: null,
+    organizationPermissions: null,
+    hasConnection: false,
+  };
 }

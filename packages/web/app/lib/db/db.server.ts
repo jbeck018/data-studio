@@ -3,7 +3,7 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import pkg from 'pg';
 const { Pool } = pkg;
 
-import { env } from '~/env.server';
+import { env } from '../../env.server';
 import * as schema from './schema';
 
 // Create system database connection pool

@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { TableNode, RelationshipEdge, TableColumn } from '~/types/schema';
+import type { TableNode, RelationshipEdge, TableColumn } from '../types/schema';
 
 interface LayoutOptions {
   nodeWidth?: number;

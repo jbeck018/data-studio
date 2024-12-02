@@ -1,5 +1,5 @@
 import { format } from "sql-formatter";
-import { QueryError } from '~/types/query';
+import { QueryError } from '../types/query';
 
 /**
  * Sanitizes table and column names to prevent SQL injection.

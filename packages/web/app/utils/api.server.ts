@@ -1,4 +1,4 @@
-import type { TableDataResponse, TableSchema, QueryResult } from '~/types';
+import type { TableDataResponse, TableSchema, QueryResult } from '../types';
 import { pool } from './pool.server';
 import { sanitizeTableName } from './sql-sanitizer.server';
 
@@ -9,6 +9,7 @@ export async function fetchSchema(): Promise<TableSchema[]> {
     console.log('Connected to database, executing query...');
     const result = await client.query<{
       table_name: string;
+      connection_id: string;
       columns: Array<{
         column_name: string;
         data_type: string;
@@ -19,6 +20,7 @@ export async function fetchSchema(): Promise<TableSchema[]> {
     }>(`
       SELECT 
         tables.table_name,
+        connections.id as connection_id,
         json_agg(
           json_build_object(
             'column_name', columns.column_name,
@@ -27,41 +29,44 @@ export async function fetchSchema(): Promise<TableSchema[]> {
             'column_default', columns.column_default
           )
         ) as columns,
-        json_agg(
-          CASE WHEN pk.column_name IS NOT NULL 
+        array_agg(DISTINCT CASE WHEN tc.constraint_type = 'PRIMARY KEY' 
           THEN columns.column_name 
-          END
-        ) FILTER (WHERE pk.column_name IS NOT NULL) as primary_key
+          ELSE NULL 
+        END) FILTER (WHERE tc.constraint_type = 'PRIMARY KEY') as primary_key
       FROM 
-        information_schema.tables
-        JOIN information_schema.columns ON tables.table_name = columns.table_name
-        LEFT JOIN (
-          SELECT 
-            tc.table_name, kcu.column_name
-          FROM 
-            information_schema.table_constraints tc
-            JOIN information_schema.key_column_usage kcu 
-              ON tc.constraint_name = kcu.constraint_name
-          WHERE tc.constraint_type = 'PRIMARY KEY'
-        ) pk ON tables.table_name = pk.table_name 
-          AND columns.column_name = pk.column_name
+        information_schema.tables tables
+      JOIN 
+        information_schema.columns columns ON tables.table_name = columns.table_name
+      LEFT JOIN 
+        information_schema.table_constraints tc ON tables.table_name = tc.table_name
+      LEFT JOIN 
+        information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name 
+          AND columns.column_name = kcu.column_name
+      JOIN 
+        connections ON connections.id = current_setting('app.current_connection_id')::uuid
       WHERE 
         tables.table_schema = 'public'
       GROUP BY 
-        tables.table_name;
+        tables.table_name, connections.id;
     `);
 
     return result.rows.map(row => ({
       name: row.table_name,
+      table_name: row.table_name,
+      connectionId: row.connection_id,
       columns: row.columns.map(col => ({
+        column_name: col.column_name,
         name: col.column_name,
         type: col.data_type,
+        data_type: col.data_type,
+        is_nullable: col.is_nullable,
         nullable: col.is_nullable === 'YES',
-        defaultValue: col.column_default || undefined
+        column_default: col.column_default
       })),
-      primaryKey: row.primary_key || undefined,
-      rowCount: 0, // This would need a separate query to get accurate count
-      sizeInBytes: 0 // This would need a separate query to get accurate size
+      primary_key: row.primary_key?.filter(Boolean) || null,
+      foreign_keys: [],
+      rowCount: 0,
+      sizeInBytes: 0
     }));
   } finally {
     client.release();

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { TableSchema, Column } from "~/types";
+import type { TableSchema, Column } from "../types";
 
 interface TableStructureProps {
   schema: TableSchema;

@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { startCase } from "lodash-es";
-import { cn } from "~/utils/cn";
-import type { Column } from "~/types";
+import { cn } from "../utils/cn";
+import type { Column } from "../types";
 
 interface RowDetailsSidebarProps {
   row: Record<string, unknown> | null;

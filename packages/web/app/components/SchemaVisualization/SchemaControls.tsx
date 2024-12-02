@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
 import { Panel } from '@reactflow/core';
-import { Button } from '~/components/Button';
-import type { LayoutType } from '~/utils/schemaLayout';
-import type { NodeStatistics } from '~/utils/schemaLayout';
-import { cn } from '~/utils/cn';
+import { Button } from '../../components/Button';
+import type { LayoutType } from '../../utils/schemaLayout';
+import type { NodeStatistics } from '../../utils/schemaLayout';
+import { cn } from '../../utils/cn';
 
 interface SchemaControlsProps {
   selectedLayout: LayoutType;
@@ -65,9 +65,9 @@ export function SchemaControls({
               <div>Incoming: {statistics.relationships.incomingCount}</div>
               <div>Outgoing: {statistics.relationships.outgoingCount}</div>
               <div>Total Related: {statistics.relationships.totalRelated}</div>
-              <div>One-to-One: {statistics.relationships.relationshipTypes.oneToOne}</div>
-              <div>One-to-Many: {statistics.relationships.relationshipTypes.oneToMany}</div>
-              <div>Many-to-Many: {statistics.relationships.relationshipTypes.manyToMany}</div>
+              <div>One-to-One: {statistics.relationships.relationshipTypes['one-to-one']}</div>
+              <div>One-to-Many: {statistics.relationships.relationshipTypes['one-to-many']}</div>
+              <div>Many-to-Many: {statistics.relationships.relationshipTypes['many-to-many']}</div>
             </div>
           </div>
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useWebSocket } from './useWebSocket';
-import type { StreamingQueryMessage, StreamingQueryState, StreamingQueryOptions } from '~/types/streaming';
-import type { WebSocketMessage } from '~/types/websocket';
+import type { StreamingQueryMessage, StreamingQueryState, StreamingQueryOptions } from '../types/streaming';
+import type { WebSocketMessage } from '../types/websocket';
 
 const INITIAL_STATE: StreamingQueryState = {
   queryId: '',

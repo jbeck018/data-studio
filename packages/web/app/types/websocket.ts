@@ -5,11 +5,16 @@ export interface WebSocketMessage {
   channel?: string;
   payload?: any;
   message?: string;
+  queryId?: string;
+  status?: string;
+  data?: any;
+  error?: string;
 }
 
 export interface WebSocketClientMessage {
-  type: 'subscribe' | 'unsubscribe' | 'execute_query' | 'cancel_query';
+  type: 'subscribe' | 'unsubscribe' | 'execute_query' | 'cancel_query' | 'subscribe:table' | 'unsubscribe:table';
   channel?: string;
+  tableName?: string;
   sql?: string;
   queryId?: string;
   options?: {
@@ -31,6 +36,18 @@ export interface QueryNotification {
   endTime?: string;
 }
 
+export interface TableUpdate {
+  type: 'INSERT' | 'UPDATE' | 'DELETE';
+  table: string;
+  data: Record<string, unknown>;
+  primaryKey?: Record<string, unknown>;
+}
+
+export interface TableUpdateMessage extends WebSocketMessage {
+  type: 'table:update';
+  update: TableUpdate;
+}
+
 export interface TableUpdateNotification {
   type: 'table_update';
   operation: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -48,7 +65,7 @@ export interface SystemNotification {
   details?: any;
 }
 
-export type NotificationPayload = QueryNotification | TableUpdateNotification | SystemNotification;
+export type NotificationPayload = QueryNotification | TableUpdateMessage | SystemNotification | TableUpdateNotification;
 
 export interface AuthenticatedWebSocket extends WebSocket {
   userId: string;

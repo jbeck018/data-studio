@@ -1,9 +1,8 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import * as schema from './schema';
 import type { Pool } from 'pg';
+import pg from 'pg';
+const { Pool: PgPool } = pg;
 
-interface ConnectionConfig {
+export interface ConnectionConfig {
   host: string;
   port: number;
   database: string;
@@ -14,7 +13,7 @@ interface ConnectionConfig {
 
 export class ConnectionManager {
   private static instance: ConnectionManager;
-  private connections: Map<string, postgres.Sql<any>>;
+  private connections: Map<string, Pool>;
 
   private constructor() {
     this.connections = new Map();
@@ -27,19 +26,20 @@ export class ConnectionManager {
     return ConnectionManager.instance;
   }
 
-  public async getConnection(config: ConnectionConfig): Promise<postgres.Sql<any>> {
+  public async getConnection(config: ConnectionConfig): Promise<Pool> {
     const connectionString = this.buildConnectionString(config);
     
     if (!this.connections.has(connectionString)) {
       try {
-        const sql = postgres(connectionString, {
+        const pool = new PgPool({
+          connectionString,
           ssl: config.ssl,
           max: 10,
-          idle_timeout: 20,
-          connect_timeout: 10
+          idleTimeoutMillis: 20000,
+          connectionTimeoutMillis: 10000
         });
         
-        this.connections.set(connectionString, sql);
+        this.connections.set(connectionString, pool);
       } catch (error) {
         console.error('Failed to establish database connection:', error);
         throw error;
@@ -49,32 +49,15 @@ export class ConnectionManager {
     return this.connections.get(connectionString)!;
   }
 
-  public getDrizzle(sql: postgres.Sql<any>) {
-    return drizzle(sql, { schema });
-  }
-
   private buildConnectionString(config: ConnectionConfig): string {
     const { host, port, database, user, password, ssl } = config;
-    let connectionString = `postgres://${user}:${password}@${host}:${port}/${database}`;
-    if (ssl) {
-      connectionString += '?sslmode=require';
-    }
-    return connectionString;
+    const sslParam = ssl ? '?sslmode=require' : '';
+    return `postgresql://${user}:${password}@${host}:${port}/${database}${sslParam}`;
   }
 
-  public async closeConnection(config: ConnectionConfig): Promise<void> {
-    const connectionString = this.buildConnectionString(config);
-    const connection = this.connections.get(connectionString);
-    
-    if (connection) {
-      await connection.end();
-      this.connections.delete(connectionString);
-    }
-  }
-
-  public async closeAllConnections(): Promise<void> {
-    for (const connection of this.connections.values()) {
-      await connection.end();
+  public async closeAll(): Promise<void> {
+    for (const pool of this.connections.values()) {
+      await pool.end();
     }
     this.connections.clear();
   }

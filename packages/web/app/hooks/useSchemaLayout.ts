@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Node, Edge } from '@reactflow/core';
-import type { TableNode, RelationshipEdge, SchemaLayout, TableColumn } from '~/types/schema';
-import { calculateOptimalLayout, findRelatedNodes, type LayoutType } from '~/utils/schemaLayout';
+import type { Node } from '@xyflow/react';
+import type { ProcessedSchemaTable, RelationshipEdge, SchemaLayout } from '../types/schema';
+import { findRelatedNodes, type LayoutType } from '../utils/schemaLayout';
 
 const LAYOUT_STORAGE_KEY = 'schema-layout';
 
 interface UseSchemaLayoutOptions {
-  initialNodes: Node<{ label: string; columns: TableColumn[] }>[];
+  initialNodes: Node<{ label: string; columns: ProcessedSchemaTable['columns'] }>[];
   initialEdges: RelationshipEdge[];
   onLayoutChange?: (layout: SchemaLayout) => void;
 }
@@ -16,7 +16,7 @@ export function useSchemaLayout({
   initialEdges,
   onLayoutChange,
 }: UseSchemaLayoutOptions) {
-  const [nodes, setNodes] = useState<Node<{ label: string; columns: TableColumn[] }>[]>(initialNodes);
+  const [nodes, setNodes] = useState<Node<{ label: string; columns: ProcessedSchemaTable['columns'] }>[]>(initialNodes);
   const [edges, setEdges] = useState<RelationshipEdge[]>(initialEdges);
   const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
   const [selectedLayout, setSelectedLayout] = useState<LayoutType>('auto');
@@ -56,7 +56,7 @@ export function useSchemaLayout({
   }, [nodes]);
 
   const applyLayout = useCallback(
-    (type: LayoutType, layoutedNodes: Node<{ label: string; columns: TableColumn[] }>[]) => {
+    (type: LayoutType, layoutedNodes: Node<{ label: string; columns: ProcessedSchemaTable['columns'] }>[]) => {
       setSelectedLayout(type);
       setNodes(layoutedNodes);
       onLayoutChange?.({ nodes: layoutedNodes, edges });
@@ -82,7 +82,7 @@ export function useSchemaLayout({
   );
 
   const onNodeDragStop = useCallback(
-    (event: React.MouseEvent, node: Node<{ label: string; columns: TableColumn[] }>) => {
+    (event: React.MouseEvent, node: Node<{ label: string; columns: ProcessedSchemaTable['columns'] }>) => {
       const updatedNodes = nodes.map((n) =>
         n.id === node.id ? { ...n, position: node.position } : n
       );

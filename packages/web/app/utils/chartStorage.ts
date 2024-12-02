@@ -1,4 +1,4 @@
-import type { ChartData } from '~/components/DataVisualization';
+import type { ChartData } from '../components/DataVisualization';
 
 export interface SavedChart extends ChartData {
   id: string;

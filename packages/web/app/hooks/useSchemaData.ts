@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { TableColumn } from '~/types/schema';
+import type { TableSchema, ProcessedSchemaTable } from '../types/schema';
 
 interface SchemaTable {
   table_name: string;
@@ -14,54 +14,31 @@ interface SchemaTable {
   }[];
 }
 
-export function useSchemaData(schemaData: SchemaTable[]) {
+export function useSchemaData(schemaData: TableSchema[]): { tables: ProcessedSchemaTable[] } {
   return useMemo(() => {
-    const tables = schemaData.map((table) => ({
+    const tables = schemaData.map((table): ProcessedSchemaTable => ({
       name: table.table_name,
-      columns: table.columns.map((col) => ({
-        name: col.column_name,
-        type: col.data_type,
-        nullable: col.is_nullable,
-        isPrimaryKey: col.constraint_type === 'PRIMARY KEY',
-        isForeignKey: col.constraint_type === 'FOREIGN KEY',
-        ...(col.constraint_type === 'FOREIGN KEY' && {
-          references: {
-            table: col.foreign_table_name!,
-            column: col.foreign_column_name!,
-          },
-        }),
-      })) as TableColumn[],
+      columns: table.columns.map((col) => {
+        const isPrimaryKey = table.primary_key?.includes(col.column_name) ?? false;
+        const foreignKey = table.foreign_keys?.find(fk => fk.column_name === col.column_name);
+        const isForeignKey = !!foreignKey;
+
+        return {
+          name: col.column_name,
+          type: col.data_type,
+          nullable: col.is_nullable === 'YES',
+          isPrimaryKey,
+          isForeignKey,
+          ...(isForeignKey && {
+            references: {
+              table: foreignKey!.foreign_table_name,
+              column: foreignKey!.foreign_column_name,
+            },
+          }),
+        };
+      }),
     }));
 
-    const relationships = schemaData
-      .flatMap((table) =>
-        table.columns
-          .filter((col) => col.constraint_type === 'FOREIGN KEY')
-          .map((col) => ({
-            sourceTable: table.table_name,
-            sourceColumn: col.column_name,
-            targetTable: col.foreign_table_name!,
-            targetColumn: col.foreign_column_name!,
-            // This is a simplified relationship type inference
-            // In a real app, you'd want to analyze the constraints more carefully
-            type: 'one-to-many' as const,
-          })),
-      )
-      .filter(
-        (rel, index, self) =>
-          index ===
-          self.findIndex(
-            (r) =>
-              r.sourceTable === rel.sourceTable &&
-              r.sourceColumn === rel.sourceColumn &&
-              r.targetTable === rel.targetTable &&
-              r.targetColumn === rel.targetColumn,
-          ),
-      );
-
-    return {
-      tables,
-      relationships,
-    };
+    return { tables };
   }, [schemaData]);
 }
