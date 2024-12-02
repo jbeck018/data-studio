@@ -42,6 +42,25 @@ The project is a web-based database management studio similar to Data Studio, pr
    - Primary key management
    - Data editing and deletion
    - Row details viewing with formatted display
+   - Real-time table updates
+     - [x] WebSocket integration for table changes
+     - [x] Live updates for INSERT operations
+     - [x] Live updates for UPDATE operations
+     - [x] Live updates for DELETE operations
+     - [x] Type-safe WebSocket messages
+   - Database Connection Management
+     - [x] Type-safe connection configurations
+     - [x] Support for multiple database types (Postgres, MySQL, SQLite, MongoDB, Redis)
+     - [x] Connection testing and validation
+     - [x] Connection editing with proper type handling
+     - [x] Organization-scoped connections
+   - Authentication and Access Control
+     - [x] Route-based authentication
+     - [x] Public and authenticated layouts
+     - [x] Login and registration flows
+     - [x] Organization-based access control
+     - [x] Connection-based access control
+     - [x] WebSocket authentication
 
 4. Authentication
    - [x] JWT-based authentication
@@ -79,108 +98,55 @@ The project is a web-based database management studio similar to Data Studio, pr
     - [x] Login page with email/password
     - [x] Registration page with organization creation
     - [x] Organization selection page
-    - [ ] Organization settings page
-      - [x] Member management
-      - [x] Role assignment
-      - [ ] Connection management
-    - [ ] User profile page
-      - [ ] Password change
-      - [ ] Email preferences
-      - [ ] Theme settings
-  - [ ] Connection management UI
-    - [ ] Connection creation wizard
-    - [ ] Connection testing
-    - [ ] Connection editing
-    - [ ] Connection deletion with confirmation
-  - [x] Loading states and error handling
-    - [x] SQL query execution loading state
-    - [x] SQL formatting loading state
-    - [x] SQL syntax validation and error highlighting
-    - [x] Improved error messages with context
-  - [x] Syntax highlighting for SQL editor
-  - [x] Auto-complete for SQL queries
-    - [x] SQL keyword suggestions
-    - [x] Table name completion
-    - [x] Column name completion
-    - [x] Context-aware suggestions
-  - [x] Schema visualization using @xyflow/react
-    - [x] Interactive table nodes with column details
-      - [x] Column properties (name, type, nullable)
-      - [x] Primary and foreign key indicators
-      - [x] Unique constraint indicators
-      - [x] Index status indicators
-      - [x] Table ID and metadata display
-    - [x] Relationship edges with cardinality indicators
-    - [x] Multiple layout algorithms
-      - [x] Force-directed layout with physics simulation
-      - [x] Circular layout with customizable radius
-      - [x] Tree layout with hierarchical relationships
-      - [x] Custom layout support
-    - [x] Node statistics and metrics
-      - [x] Basic statistics (column counts, key counts)
-      - [x] Relationship analysis (incoming/outgoing counts)
-      - [x] Column type distribution
-      - [x] Complexity scoring
-      - [x] Centrality metrics
-    - [x] Search and filter capabilities
-    - [x] Export to SVG functionality
-    - [x] Highlighting of related tables
-  - [x] Natural language query suggestions using RAG and pg_ai
-    - [x] Integration with pg_ai for embeddings and vector search
-    - [x] Common query pattern management
-    - [x] Template-based SQL generation
-    - [x] Smart value extraction from user input
-    - [x] Query history tracking and learning
-    - [x] Context-aware suggestions based on schema
-    - [x] Real-time query suggestions
-    Features:
-    - Natural language to SQL translation
-    - Query pattern matching and reuse
-    - Smart template processing with relationship awareness
-    - Value extraction with type inference
-    - Query history tracking for improvement
-    - Schema-aware suggestions
-    Implementation:
-    - Uses pg_ai extension for embeddings and vector search
-    - Maintains a query_patterns table for common patterns
-    - Template-based SQL generation with smart context handling
-    - Advanced value extraction for dates, numbers, and strings
-    - Query history tracking for learning and improvement
+    - [x] User profile management
+      - [x] Profile information updates (name, email)
+      - [x] Password change functionality
+      - [x] Form validation and error handling
+  - [x] Connection management UI
+    - [x] Connection service implementation
+      - [x] CRUD operations
+      - [x] Connection testing
+      - [x] Type-safe schemas
+    - [x] Connection list view
+      - [x] Table display with status
+      - [x] Add connection button
+      - [x] Edit connection links
+    - [x] Connection creation form
+      - [x] Database type selection
+        - [x] PostgreSQL
+        - [x] MySQL
+        - [x] SQLite
+        - [x] Microsoft SQL Server
+        - [x] Oracle
+        - [x] MongoDB
+        - [x] Redis
+      - [x] Connection field validation
+      - [x] Connection testing
+      - [x] Error handling and feedback
+    - [x] Connection edit page
+      - [x] Load existing connection details
+      - [x] Update connection information
+      - [x] Delete connection functionality
+      - [x] Test connection capability
+    - [x] Advanced Data Visualization
+      - [x] Smart visualization component
+        - [x] Automatic data profiling
+        - [x] Anomaly detection
+        - [x] Smart aggregations
+        - [x] Metric suggestions
+      - [x] AI-powered visualization recommendations
+      - [x] Interactive visualization customization
+      - [x] Real-time data updates
+  - [ ] Query interface
+    - [x] SQL query editor with formatting
+    - [x] Query execution with sanitization
+    - [x] Query results display
+    - [x] Table structure viewer and editor
+    - [x] Inline data editing with keyboard support
+    - [x] Row deletion capability
+    - [x] Card-based row details sidebar with slide-over animation
+    - [x] Responsive layout with proper spacing and typography
   - [ ] Analytics and visualization tools
-  - [ ] Advanced data visualization
-    - [ ] Interactive query result visualizations (charts, graphs, pivot tables)
-    - [ ] Solution similar to Rill to auto-generate reports on tables and relations to those tables using AI and LLMs. Reference: https://github.com/rilldata/rill
-      - [ ] Automatic data profiling and anomaly detection
-      - [ ] Smart aggregations and metric suggestions
-      - [ ] Natural language querying for report generation
-      - [ ] Relationship discovery between tables
-    - [ ] Database schema relationship diagrams
-      - [ ] Interactive ERD with zoom and pan
-      - [ ] Highlight related tables and foreign key paths
-      - [ ] Schema change history visualization
-    - [ ] Performance analytics from pg_stats
-      - [ ] Query performance monitoring and trends
-      - [ ] Index usage statistics
-      - [ ] Table access patterns
-      - [ ] Lock and blocking analysis
-    - [ ] Table size and growth trends
-      - [ ] Size forecasting with ML models
-      - [ ] Bloat analysis and cleanup recommendations
-      - [ ] Storage optimization suggestions
-    - [ ] Query pattern analysis
-      - [ ] Most frequent queries and patterns
-      - [ ] Resource-intensive queries
-      - [ ] Query optimization suggestions using AI
-    - [ ] Custom dashboards
-      - [ ] Drag-and-drop dashboard builder
-      - [ ] Saved queries and visualizations
-      - [ ] Real-time monitoring views
-      - [ ] Shareable dashboard links
-    - [ ] Data quality metrics
-      - [ ] Column nullability analysis
-      - [ ] Data distribution visualization
-      - [ ] Constraint violation monitoring
-      - [ ] Data freshness tracking
   - [ ] Implement real-time capabilities
     - [x] WebSocket server
     - [x] PostgreSQL LISTEN/NOTIFY
@@ -255,7 +221,7 @@ The project is a web-based database management studio similar to Data Studio, pr
   - [ ] Force new users to create their first database connection
   - [ ] Prevent access to any other routes until first connection is created
 
-#### 2. Client Package (@drizzle-server/client)
+#### 2. Client Package (build of the kysely package using introspection.)
 - [ ] Design type-safe API client
   - [ ] Connection management
   - [ ] Query builder
@@ -453,28 +419,98 @@ interface ConnectionCheckConfig {
    - Session security
    - CSRF protection
 
-## Recent Updates
-1. Authentication System Improvements
-   - Fixed type safety in user session management
-   - Implemented proper role-based access control with enum types
-   - Enhanced organization membership handling
-   - Added secure session management with remember-me functionality
-   - Improved error handling in login and signup flows
-   - Added organization context preservation across sessions
+## Future Features
 
-2. Type System Enhancements
-   - Updated User type to use proper Role enum
-   - Fixed type definitions in authentication flow
-   - Added proper type assertions and validations
-   - Improved error type definitions
-   - Enhanced form data handling with proper types
+### Cross-Database Integration
+1. Cross-Database Query Support
+   - Enable queries across multiple database connections
+   - Support for different database types (PostgreSQL, MySQL)
+   - Query builder interface for cross-database joins
+   - Performance optimization for cross-database queries
+   - Caching layer for frequently accessed cross-database results
 
-3. Security Improvements
-   - Implemented proper password hashing
-   - Added secure session cookie configuration
-   - Enhanced RBAC with proper role validation
-   - Added organization access checks
-   - Improved error messages without leaking sensitive information
+2. Row-Level Security Integration
+   - Pass authentication context to database connections
+   - Support for row-level security policies
+   - User-specific data access controls
+   - Organization-level security policies
+   - Audit logging for security-related events
+
+### Client API Enhancements
+1. Type-Safe Query Builder with Kysely
+   - Leverage Kysely's introspection for type generation
+   - Generate TypeScript interfaces from database schema
+   - Support for:
+     - Complex joins and subqueries
+     - Window functions
+     - Common Table Expressions (CTEs)
+     - Dynamic query composition
+     - Query result type inference
+   - Cross-database query capabilities:
+     - Schema introspection across multiple databases
+     - Type-safe joins between databases
+     - Unified query interface for different database types
+   - Integration features:
+     - Automatic schema synchronization
+     - Real-time type updates
+     - Query optimization hints
+     - Execution plan analysis
+
+2. Query Builder Features
+   - Visual query builder interface
+   - SQL preview with syntax highlighting
+   - Performance analysis tools
+   - Query history with version control
+   - Saved queries library
+
+3. Type Generation Pipeline
+   - Automated type generation workflow
+   - Schema change detection
+   - Type definition versioning
+   - Breaking change detection
+   - Migration script generation
+
+4. API Creation Interface
+   - Visual API builder for database queries
+   - Custom endpoint creation with:
+     - Type-safe request/response handling
+     - Automatic OpenAPI documentation
+     - Built-in validation
+     - Rate limiting
+   - API versioning support
+   - Usage analytics and monitoring
+
+5. Security Integration
+   - Row-level security policy generation
+   - Type-safe policy definitions
+   - Authentication context propagation
+   - Audit logging
+   - Security policy testing tools
+
+### Implementation Strategy
+1. Phase 1: Kysely Integration
+   - Set up Kysely with PostgreSQL dialect
+   - Implement schema introspection
+   - Create type generation pipeline
+   - Build basic query builder
+
+2. Phase 2: Cross-Database Support
+   - Add MySQL dialect support
+   - Implement cross-database joins
+   - Create unified query interface
+   - Add performance optimization
+
+3. Phase 3: API Layer
+   - Build API creation interface
+   - Implement security policies
+   - Add documentation generation
+   - Create monitoring tools
+
+4. Phase 4: Advanced Features
+   - Real-time schema updates
+   - Query optimization
+   - Advanced security features
+   - Analytics and logging
 
 ### Next Steps
 1. Complete the connection management UI
@@ -483,83 +519,93 @@ interface ConnectionCheckConfig {
 4. Enhance real-time capabilities
 5. Implement comprehensive security testing
 
-## Future Chart Types
+## Immediate Priority: Web Package Completion
 
-The following chart types from Recharts could be added to enhance data visualization capabilities:
+#### 1. Authentication & User Experience
+1. User Profile
+   - [x] Profile page implementation
+     - [x] User details display and editing
+     - [x] Password change functionality
+     - [x] Form validation and error handling
+   - [x] Profile navigation and layout
+   - [x] Form validation and error handling
+   - [x] Success notifications
 
-### Time Series
-- **Composed Chart**: Combine multiple chart types (e.g., line + bar) for comparing different metrics
-- **Brush Chart**: Add time range selection for zooming into specific periods
-- **Step Line Chart**: For discrete changes over time (e.g., status changes)
-- **Reference Lines/Areas**: Add statistical markers like mean, median, or thresholds
+2. Organization Management
+   - [ ] Organization Settings
+     - [ ] Organization profile editing
+     - [ ] Billing information management
+     - [ ] Usage statistics and limits
+   - [ ] Member Management
+     - [ ] Improved invite flow
+     - [ ] Role management interface
+     - [ ] Member removal confirmation
+     - [ ] Activity logging
+   - [ ] Access Control
+     - [ ] Permission management UI
+     - [ ] Role template creation
+     - [ ] Custom role definition
 
-### Categorical
-- **Radial Bar Chart**: Circular progress bars for comparing categories
-- **Treemap**: Hierarchical data visualization
-- **Funnel Chart**: For conversion or process flow analysis
-- **Stacked Area**: For showing cumulative values over time
+3. Connection Management
+   - [ ] Connection Creation
+     - [ ] Step-by-step creation wizard
+     - [ ] Connection testing interface
+     - [ ] Credential validation
+     - [ ] SSL configuration
+   - [ ] Connection Settings
+     - [ ] Edit connection details
+     - [ ] Connection pool configuration
+     - [ ] Usage monitoring
+     - [ ] Access control per connection
+   - [ ] Connection Dashboard
+     - [ ] Status monitoring
+     - [ ] Performance metrics
+     - [ ] Query history
+     - [ ] Error logging
 
-### Distribution
-- **Histogram**: For showing data distribution (can be implemented using bar charts)
-- **Violin Plot**: For showing probability density (requires custom implementation)
-- **Error Bars**: For showing uncertainty in measurements
+4. User Experience Improvements
+   - [ ] Enhanced Error Handling
+     - [ ] User-friendly error messages
+     - [ ] Guided error resolution
+     - [ ] Status page for system issues
+   - [ ] Navigation Improvements
+     - [ ] Breadcrumb navigation
+     - [ ] Recent items history
+     - [ ] Quick action menu
+   - [ ] Notifications
+     - [ ] System notifications
+     - [ ] User action notifications
+     - [ ] Email notifications
+   - [ ] Onboarding
+     - [ ] Welcome tour
+     - [ ] Feature tutorials
+     - [ ] Quick start guides
 
-### Specialized
-- **Radar/Spider Chart**: For multivariate data comparison
-- **Sankey Diagram**: For flow visualization
-- **Gauge Chart**: For showing single values in a range
-- **Candlestick**: For financial data (OHLC)
+#### Implementation Order
+1. User Profile (1-2 days)
+   - Complete basic profile management
+   - Add password change functionality
+   - Implement theme settings
 
-### Interactive Features
-- **Synchronized Charts**: Multiple charts that zoom/pan together
-- **Click-through Details**: Drill down into data points
-- **Custom Tooltips**: Enhanced data point information
-- **Dynamic Reference Lines**: User-defined thresholds
+2. Organization Settings (2-3 days)
+   - Enhance organization profile management
+   - Improve member management interface
+   - Add role management features
 
-### Accessibility Improvements
-- **Color Blind Friendly**: Alternative color schemes
-- **Pattern Fills**: For better distinction without color
-- **Screen Reader Support**: ARIA labels and descriptions
+3. Connection Management (3-4 days)
+   - Build connection creation wizard
+   - Implement connection testing
+   - Add connection monitoring
 
-### Data Processing
-- **Moving Averages**: Smoothing for time series
-- **Aggregation Options**: Sum, average, median, etc.
-- **Outlier Detection**: Automatic highlighting of anomalies
-- **Trend Lines**: Linear/polynomial regression
+4. User Experience (2-3 days)
+   - Enhance error handling
+   - Add notifications system
+   - Implement onboarding features
 
-Implementation Priority:
-1. Composed Chart (most versatile)
-2. Radar Chart (unique visualization)
-3. Brush Chart (time series analysis)
-4. Radial Bar Chart (compact categorical)
-5. Treemap (hierarchical data)
-
-## Development Guidelines
-
-### Code Organization
-- Feature-based directory structure
-- Shared utilities and types
-- Clear separation of concerns
-- Type-safe interfaces
-
-### Testing Strategy
-- Unit tests for core functionality
-- Integration tests for database operations
-- End-to-end tests for user flows
-- Test environment separation
-- Module resolution optimization
-
-### Security Considerations
-- SQL injection prevention
-- Authentication and authorization
-- Rate limiting
-- Input validation
-- Secure WebSocket communication
-- Error handling and logging
-
-### Performance Optimization
-- Query result streaming
-- Connection pooling
-- Caching strategies
-- Real-time updates
-- Resource monitoring
+#### Success Criteria
+- Complete user management lifecycle
+- Intuitive organization management
+- Reliable connection handling
+- Polished user experience
+- Comprehensive error handling
+- Clear user feedback mechanisms
