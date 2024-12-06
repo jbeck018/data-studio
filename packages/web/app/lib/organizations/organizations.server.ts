@@ -1,7 +1,7 @@
+import { v4 as uuidv4 } from "uuid";
 import { db } from "../../lib/db/db.server";
 import { organizations, organizationMembers } from "../../lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 
 export interface Organization {
   id: string;
@@ -29,7 +29,7 @@ interface AddOrganizationMemberInput {
 }
 
 export async function createOrganization({ name, slug, description, userId }: CreateOrganizationInput) {
-  const id = createId();
+  const id = uuidv4();
 
   const [organization] = await db.insert(organizations)
     .values({

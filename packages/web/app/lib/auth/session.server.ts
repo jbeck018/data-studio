@@ -2,7 +2,7 @@ import { createCookieSessionStorage, redirect } from '@remix-run/node';
 import { env } from '../../env.server';
 import { db } from '../../lib/db/db.server';
 import { users, organizationMembers, databaseConnections } from '../../lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, not } from 'drizzle-orm';
 import { getUserOrganizationRole, getUserOrganizationPermissions, Role, Permission } from './rbac.server';
 
 // Session configuration
@@ -21,21 +21,18 @@ const sessionStorage = createCookieSessionStorage({
 // Get the user session
 export async function getUserSession(request: Request) {
   const session = await sessionStorage.getSession(request.headers.get('Cookie'));
-  console.log('Got session:', {
-    userId: session.get('userId'),
-    organizationId: session.get('organizationId'),
-  });
+  // console.log('Got session:', {
+  //   userId: session.get('userId'),
+  //   organizationId: session.get('organizationId'),
+  // });
   return session;
 }
 
 // Get the logged-in user with roles and connection status
 export async function getUser(request: Request) {
-  console.log('Getting user from session');
   const session = await getUserSession(request);
   const userId = session.get('userId');
   const organizationId = session.get('organizationId');
-  
-  console.log('Session data:', { userId, organizationId });
   
   if (!userId) {
     console.log('No userId in session');
@@ -53,10 +50,7 @@ export async function getUser(request: Request) {
     },
   });
 
-  console.log('User from database:', userFromDb);
-
   if (!userFromDb) {
-    console.log('User not found in database');
     throw await logout(request);
   }
 
@@ -75,8 +69,6 @@ export async function getUser(request: Request) {
       role: true,
     },
   });
-
-  console.log('User organization memberships:', organizationMemberships);
 
   // Format organizations array to match User type
   const organizations = organizationMemberships.map(membership => ({
@@ -103,7 +95,7 @@ export async function getUser(request: Request) {
   const hasConnection = await db.query.databaseConnections.findFirst({
     where: and(
       eq(databaseConnections.organizationId, effectiveOrgId),
-      eq(databaseConnections.archived, false)
+      not(eq(databaseConnections.archived, true))
     ),
   }) !== null;
 
@@ -137,8 +129,6 @@ export async function createUserSession({
   remember?: boolean;
   redirectTo: string;
 }) {
-  console.log('Creating session for user:', userId);
-  console.log('Session params:', { organizationId, remember, redirectTo });
   
   const session = await sessionStorage.getSession();
   session.set('userId', userId);
@@ -147,14 +137,10 @@ export async function createUserSession({
   }
 
   const maxAge = remember ? 60 * 60 * 24 * 30 : undefined; // 30 days if remember
-  console.log('Setting cookie maxAge:', maxAge);
 
   const cookie = await sessionStorage.commitSession(session, {
     maxAge,
   });
-
-  console.log('Session cookie created');
-  console.log('Creating redirect response to:', redirectTo);
   
   const response = new Response(null, {
     status: 302,
@@ -162,11 +148,6 @@ export async function createUserSession({
       Location: redirectTo,
       'Set-Cookie': cookie,
     },
-  });
-
-  console.log('Response created:', {
-    status: response.status,
-    headers: Object.fromEntries(response.headers.entries()),
   });
   
   return response;
@@ -255,4 +236,18 @@ export async function requireConnection(
     throw redirect(`/connection/new?${searchParams}`);
   }
   return user;
+}
+
+// Require user ID
+export async function requireUserId(
+  request: Request,
+  redirectTo: string = new URL(request.url).pathname,
+) {
+  const session = await getUserSession(request);
+  const userId = session.get("userId");
+  if (!userId) {
+    const searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
+    throw redirect(`/login?${searchParams}`);
+  }
+  return userId;
 }

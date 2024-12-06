@@ -1,4 +1,4 @@
-import { Form, Link, useLocation } from "@remix-run/react";
+import { Form, Link, useLocation, useSubmit } from "@remix-run/react";
 import { useTheme } from "../utils/theme";
 import {
   TableCellsIcon as TableIcon,
@@ -12,6 +12,9 @@ import {
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment } from "react";
 import clsx from "clsx";
+import { ConnectionSelector } from "./ConnectionSelector";
+import { ConnectionStatus } from "./ConnectionStatus"; // Add this line
+import type { DatabaseConnection } from "../lib/db/schema/connections";
 
 interface User {
   id: string;
@@ -22,11 +25,14 @@ interface User {
 interface LayoutProps {
   children: React.ReactNode;
   user?: User | null;
+  connections?: DatabaseConnection[];
+  activeConnection?: DatabaseConnection | null;
 }
 
-export default function Layout({ children, user }: LayoutProps) {
+export default function Layout({ children, user, connections = [], activeConnection }: LayoutProps) {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
+  const submit = useSubmit();
 
   const navigation = [
     { name: 'Tables', href: '/', icon: TableIcon },
@@ -40,6 +46,15 @@ export default function Layout({ children, user }: LayoutProps) {
     { name: 'Settings', href: '/settings' },
   ];
 
+  const handleConnectionChange = (connectionId: string) => {
+    const formData = new FormData();
+    formData.append('connectionId', connectionId);
+    submit(formData, {
+      method: 'post',
+      action: '/connections/change',
+    });
+  };
+
   return (
     <div className="flex h-screen bg-light-bg-secondary dark:bg-dark-bg-primary">
       {/* Sidebar */}
@@ -50,7 +65,18 @@ export default function Layout({ children, user }: LayoutProps) {
               <img src="/assets/logo.svg" alt="Data Studio" className="h-8 w-8 mr-2" />
               <h1 className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary">Data Studio</h1>
             </div>
-            <nav className="mt-5 flex-1 space-y-1 px-2">
+
+            {/* Connection Selector */}
+            <div className="mt-4 px-4 space-y-2">
+              <ConnectionSelector
+                connections={connections}
+                activeConnection={activeConnection}
+                onConnectionChange={handleConnectionChange}
+              />
+              <ConnectionStatus connection={activeConnection} />
+            </div>
+
+            <nav className="mt-5 flex-1 space-y-1 px-2" aria-label="Sidebar">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (

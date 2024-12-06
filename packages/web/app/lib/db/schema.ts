@@ -13,6 +13,7 @@ import { relations } from 'drizzle-orm';
 import { organizations, organizationMembers } from './schema/organizations';
 import { users } from './schema/auth';
 import { databaseConnections } from './schema/connections';
+import { connectionPermissions } from './schema/connections';
 
 // Organization relations
 export const organizationsRelations = relations(organizations, ({ many }) => ({
@@ -42,5 +43,21 @@ export const databaseConnectionsRelations = relations(databaseConnections, ({ on
   organization: one(organizations, {
     fields: [databaseConnections.organizationId],
     references: [organizations.id],
+  }),
+}));
+
+// Connection permissions relations
+export const connectionPermissionsRelations = relations(connectionPermissions, ({ one }) => ({
+  user: one(users, {
+    fields: [connectionPermissions.userId],
+    references: [users.id],
+  }),
+  organization: one(organizations, {
+    fields: [connectionPermissions.organizationId],
+    references: [organizations.id],
+  }),
+  connection: one(databaseConnections, {
+    fields: [connectionPermissions.connectionId],
+    references: [databaseConnections.id],
   }),
 }));

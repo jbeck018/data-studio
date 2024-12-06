@@ -1,61 +1,53 @@
-import { Handle, Position } from '@xyflow/react';
-import type { ProcessedSchemaTable } from '../../types/schema';
+import { Handle, NodeProps, Position } from '@xyflow/react';
+import { TableNodeData } from '../../types/schema';
 import { cn } from '../../utils/cn';
 
-interface TableNodeProps {
-  data: {
-    label: string;
-    columns: ProcessedSchemaTable['columns'];
-  };
-  selected?: boolean;
-}
+export default function TableNode({ data, selected }: NodeProps<TableNodeData>) {
+  if (!data?.name || !data?.columns) return null;
 
-export function TableNode({ data, selected }: TableNodeProps) {
   return (
     <div
       className={cn(
-        'min-w-[200px] bg-light-bg-primary dark:bg-dark-bg-primary rounded-lg shadow-md border',
-        selected
-          ? 'border-primary-500 dark:border-primary-400'
-          : 'border-light-border dark:border-dark-border',
+        'bg-light-bg-primary dark:bg-dark-bg-primary rounded-lg shadow-md border border-light-border dark:border-dark-border min-w-[200px]',
+        selected && 'ring-2 ring-primary-500'
       )}
     >
-      <Handle type="target" position={Position.Left} className="!bg-primary-500" />
-      <Handle type="source" position={Position.Right} className="!bg-primary-500" />
+      <Handle type="target" position={Position.Top} className="!bg-primary-500" />
+      <Handle type="source" position={Position.Bottom} className="!bg-primary-500" />
 
-      <div className="px-4 py-2 border-b border-light-border dark:border-dark-border bg-light-bg-secondary dark:bg-dark-bg-secondary rounded-t-lg">
+      {/* Table Header */}
+      <div className="p-3 border-b border-light-border dark:border-dark-border">
         <h3 className="font-medium text-light-text-primary dark:text-dark-text-primary">
-          {data.label}
+          {data.name}
         </h3>
+        {data.comment && (
+          <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary mt-1">
+            {data.comment}
+          </p>
+        )}
       </div>
 
+      {/* Columns */}
       <div className="p-2">
         {data.columns.map((column) => (
           <div
             key={column.name}
-            className="flex items-center px-2 py-1 text-sm rounded hover:bg-light-bg-secondary dark:hover:bg-dark-bg-secondary"
+            className="flex items-center py-1 text-sm"
           >
-            <div className="flex-1 flex items-center space-x-2">
-              <span className="text-light-text-primary dark:text-dark-text-primary">
-                {column.name}
-              </span>
-              {column.isPrimaryKey && (
-                <span className="text-xs px-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded">
-                  PK
+            <div className="flex-1">
+              <div className="flex items-center">
+                {column.isPrimaryKey && (
+                  <span className="mr-1 text-xs text-primary-500">🔑</span>
+                )}
+                <span className="text-light-text-primary dark:text-dark-text-primary">
+                  {column.name}
                 </span>
-              )}
-              {column.isForeignKey && (
-                <span className="text-xs px-1 bg-secondary-100 dark:bg-secondary-900 text-secondary-700 dark:text-secondary-300 rounded">
-                  FK
-                </span>
-              )}
+              </div>
+              <div className="text-xs text-light-text-secondary dark:text-dark-text-secondary">
+                {column.type}
+                {column.isNullable && ' (nullable)'}
+              </div>
             </div>
-            <span className="text-light-text-secondary dark:text-dark-text-secondary ml-2">
-              {column.type}
-            </span>
-            {!column.nullable && (
-              <span className="ml-1 text-light-text-tertiary dark:text-dark-text-tertiary">*</span>
-            )}
           </div>
         ))}
       </div>

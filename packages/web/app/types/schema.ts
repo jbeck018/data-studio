@@ -1,4 +1,4 @@
-import type { Node, Edge } from '@xyflow/react';
+import { Node, Edge } from '@xyflow/react';
 
 export interface TableColumn {
   column_name: string;
@@ -32,65 +32,51 @@ export interface TableSchema {
   }> | null;
 }
 
-export interface ProcessedSchemaTable {
+export interface SchemaColumn {
   name: string;
-  columns: Array<{
-    name: string;
-    type: string;
-    nullable: boolean;
-    isPrimaryKey: boolean;
-    isForeignKey: boolean;
-    references?: {
-      table: string;
-      column: string;
-    };
-  }>;
-}
-
-export interface TableNode extends Node {
-  data: {
-    id: string;
-    label: string;
-    columns: ProcessedSchemaTable['columns'];
+  type: string;
+  isNullable: boolean;
+  isPrimaryKey: boolean;
+  isForeignKey: boolean;
+  references?: {
+    table: string;
+    column: string;
   };
 }
 
-export interface RelationshipEdge extends Edge {
-  data: {
-    sourceColumn: string;
-    targetColumn: string;
-    relationType: 'one-to-one' | 'one-to-many' | 'many-to-many';
-  };
-  source: string;
-  target: string;
-}
-
-export interface SchemaLayoutNode {
+export interface TableNodeDataFields {
   id: string;
-  position: { x: number; y: number };
-  data: {
-    label: string;
-    columns: ProcessedSchemaTable['columns'];
-  };
+  name: string;
+  comment?: string;
+  columns: SchemaColumn[];
+  label?: string;
+  position?: { x: number; y: number };
 }
+
+export interface RelationshipEdgeDataFields {
+  id: string;
+  sourceTable: string;
+  sourceColumn: string;
+  targetTable: string;
+  targetColumn: string;
+  label?: string;
+}
+
+export type TableNodeData = Node<TableNodeDataFields>;
+export type RelationshipEdgeData = Edge<RelationshipEdgeDataFields>;
+
+export type ProcessedSchemaTable = TableNodeData;
+
+export type LayoutType = 'auto' | 'force' | 'circular' | 'horizontal' | 'vertical';
 
 export interface SchemaLayout {
-  nodes: SchemaLayoutNode[];
-  edges: RelationshipEdge[];
+  nodes: TableNodeData[];
+  edges: RelationshipEdgeData[];
+  type: LayoutType;
 }
 
 export interface SchemaVisualizationProps {
-  schema: {
-    tables: ProcessedSchemaTable[];
-    relationships: {
-      sourceTable: string;
-      sourceColumn: string;
-      targetTable: string;
-      targetColumn: string;
-      type: 'one-to-one' | 'one-to-many' | 'many-to-many';
-    }[];
-  };
-  onNodeClick?: (node: TableNode) => void;
-  onEdgeClick?: (edge: RelationshipEdge) => void;
-  className?: string;
+  tables: ProcessedSchemaTable[];
+  relationships: RelationshipEdgeDataFields[];
+  onSearch?: (term: string) => void;
 }

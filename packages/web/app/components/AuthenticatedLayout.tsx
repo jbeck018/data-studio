@@ -5,13 +5,16 @@ import { TableCellsIcon as TableIcon, CircleStackIcon as DatabaseIcon, UserCircl
 import { Form } from "@remix-run/react";
 import { clsx } from "clsx";
 import type { User } from "../lib/auth/types";
+import type { DatabaseConnection } from "../lib/connections/config.server";
+import { CreateOrgDialog, CreateConnectionDialog } from "./modals/AuthModals";
 
 interface AuthenticatedLayoutProps {
   user: User;
+  connections: DatabaseConnection[];
   children: React.ReactNode;
 }
 
-export default function AuthenticatedLayout({ user, children }: AuthenticatedLayoutProps) {
+export default function AuthenticatedLayout({ user, connections, children }: AuthenticatedLayoutProps) {
   const location = useLocation();
 
   const navigation = [
@@ -38,13 +41,24 @@ export default function AuthenticatedLayout({ user, children }: AuthenticatedLay
           <p className="text-light-text-secondary dark:text-dark-text-secondary mb-8">
             Create your first organization to get started
           </p>
-          <Link
-            to="/organizations/new"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
-          >
-            <PlusIcon className="h-5 w-5 mr-2" />
-            Create Organization
-          </Link>
+          <CreateOrgDialog />
+        </div>
+      </div>
+    );
+  }
+
+  // Show create connection message if user has no connections
+  if (connections.length === 0) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-light-bg-secondary dark:bg-dark-bg-primary p-4">
+        <div className="w-full max-w-md text-center">
+          <h1 className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary mb-4">
+            Connect Your First Database
+          </h1>
+          <p className="text-light-text-secondary dark:text-dark-text-secondary mb-8">
+            Add your first database connection to start exploring your data
+          </p>
+          <CreateConnectionDialog />
         </div>
       </div>
     );
@@ -144,8 +158,10 @@ export default function AuthenticatedLayout({ user, children }: AuthenticatedLay
       </div>
 
       {/* Main content */}
-      <div className="flex-1 overflow-auto">
-        {children}
+      <div className="flex-1 p-4">
+        <div className="overflow-auto p-4 flex h-full flex-col rounded-2xl bg-light-bg-primary dark:bg-dark-bg-secondary shadow-lg">
+          {children}
+        </div>
       </div>
     </div>
   );

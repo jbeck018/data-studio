@@ -16,6 +16,13 @@ interface RegisterForm extends LoginForm {
   name: string;
 }
 
+interface UpdateUserInput {
+  email?: string;
+  name?: string;
+  password?: string;
+  currentPassword?: string;
+}
+
 export async function register(request: Request, formData: FormData) {
   const email = formData.get('email')?.toString();
   const password = formData.get('password')?.toString();
@@ -139,4 +146,54 @@ export async function changePassword(userId: string, currentPassword: string, ne
     .where(eq(users.id, userId));
 
   return { success: true };
+}
+
+export async function updateUser(userId: string, input: UpdateUserInput) {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const updates: Partial<typeof user> = {
+    updatedAt: new Date(),
+  };
+
+  if (input.email) {
+    // Check if email is already taken by another user
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.email, input.email),
+    });
+
+    if (existingUser && existingUser.id !== userId) {
+      throw new Error("Email is already taken");
+    }
+    updates.email = input.email;
+  }
+
+  if (input.name) {
+    updates.name = input.name;
+  }
+
+  if (input.password) {
+    if (!input.currentPassword) {
+      throw new Error("Current password is required to change password");
+    }
+
+    const isValid = await bcrypt.compare(input.currentPassword, user.hashedPassword);
+    if (!isValid) {
+      throw new Error("Current password is incorrect");
+    }
+
+    updates.hashedPassword = await bcrypt.hash(input.password, SALT_ROUNDS);
+  }
+
+  const [updatedUser] = await db.update(users)
+    .set(updates)
+    .where(eq(users.id, userId))
+    .returning();
+
+  return updatedUser;
 }

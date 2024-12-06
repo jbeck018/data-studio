@@ -1,22 +1,35 @@
 import { json, type ActionFunctionArgs } from '@remix-run/node';
 import { z } from 'zod';
 import { db } from '../lib/db/db.server';
-import { databaseConnections } from '../lib/db/schema';
+import { ConnectionConfig, databaseConnections, NewDatabaseConnection, organizationMembers } from '../lib/db/schema';
 import { requireUser } from '../lib/auth/session.server';
 import { eq } from 'drizzle-orm';
 import { ConnectionManager } from '../lib/db/connection-manager.server';
 
 const connectionSchema = z.object({
   name: z.string().min(1),
-  type: z.literal('postgresql'),
+  type: z.enum(["POSTGRES", "MYSQL", "SQLITE", "MSSQL", "ORACLE", "MONGODB", "REDIS"]),
   credentials: z.object({
-    host: z.string(),
-    port: z.number(),
-    database: z.string(),
-    user: z.string(),
-    password: z.string(),
+    host: z.string().optional(),
+    port: z.union([z.string(), z.number()]).optional(),
+    database: z.string().optional(),
+    user: z.string().optional(),
+    password: z.string().optional(),
     ssl: z.boolean().optional(),
+    filepath: z.string().optional(),
   }),
+});
+
+const connectionTestSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  type: z.enum(["POSTGRES", "MYSQL", "SQLITE", "MSSQL", "ORACLE", "MONGODB", "REDIS"]),
+  host: z.string().optional(),
+  port: z.union([z.string(), z.number()]).optional(),
+  database: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  ssl: z.boolean().optional(),
+  filepath: z.string().optional(),
 });
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -24,26 +37,67 @@ export async function action({ request }: ActionFunctionArgs) {
 
   switch (request.method) {
     case 'POST': {
+      if (request.headers.get('is-test') === 'true') {
+        try {
+          // Parse the connection data
+          const res = await request.json();
+          const data = connectionTestSchema.parse(res);
+  
+          // Normalize port to number if it's a string
+          const port = typeof data.port === 'string' ? parseInt(data.port, 10) : data.port;
+  
+          // Prepare connection configuration based on type
+          const connectionConfig = {
+            type: data.type.toLowerCase(),
+            config: {
+              type: data.type.toLowerCase(),
+              host: data.host,
+              port: port,
+              database: data.database,
+              username: data.username,
+              password: data.password,
+              ssl: data.ssl,
+              filepath: data.filepath,
+            },
+          };
+  
+          // Test the connection using ConnectionManager
+          const manager = ConnectionManager.getInstance();
+          await manager.testConnection({
+            type: connectionConfig.type,
+            config: connectionConfig.config as ConnectionConfig,
+          });
+  
+          return json({ success: true, message: "Connection successful" });
+        } catch (error) {
+          console.error("Connection test error:", error);
+          return json({ 
+            error: error instanceof Error ? error.message : "Failed to test connection" 
+          }, { status: 400 });
+        }
+      }
+
       const data = connectionSchema.parse(await request.json());
       
       // Get organization ID from the user's active organization
-      // TODO: Implement organization selection
       const orgMember = await db.query.organizationMembers.findFirst({
         where: eq(organizationMembers.userId, user.id),
       });
 
       if (!orgMember) {
-        throw json({ error: 'No organization found' }, { status: 404 });
+        return json({ error: 'No organization found' }, { status: 404 });
       }
 
+      const newConnection: NewDatabaseConnection = {
+        name: data.name,
+        type: data.type,
+        organizationId: orgMember.organizationId,
+        config: { type: data.type, ...data.credentials } as ConnectionConfig,
+        createdById: user.id,
+      };
       // Create the connection
       const [connection] = await db.insert(databaseConnections)
-        .values({
-          name: data.name,
-          type: data.type,
-          organizationId: orgMember.organizationId,
-          credentials: data.credentials,
-        })
+        .values(newConnection)
         .returning();
 
       // Test the connection
@@ -55,15 +109,30 @@ export async function action({ request }: ActionFunctionArgs) {
         await db.delete(databaseConnections)
           .where(eq(databaseConnections.id, connection.id));
         
-        throw json({ error: error.message }, { status: 400 });
+        return json({ 
+          error: error instanceof Error ? error.message : "Connection test failed" 
+        }, { status: 400 });
       }
 
       return json(connection);
     }
 
     case 'PUT': {
-      const { id } = z.object({ id: z.string() }).parse(await request.json());
-      const data = connectionSchema.parse(await request.json());
+      const updateSchema = z.object({ 
+        id: z.string(),
+        name: z.string().min(1),
+        credentials: z.object({
+          host: z.string().optional(),
+          port: z.union([z.string(), z.number()]).optional(),
+          database: z.string().optional(),
+          user: z.string().optional(),
+          password: z.string().optional(),
+          ssl: z.boolean().optional(),
+          filepath: z.string().optional(),
+        }),
+      });
+      
+      const { id, ...updateData } = updateSchema.parse(await request.json());
 
       // Verify user has access to the connection
       const connection = await db.query.databaseConnections.findFirst({
@@ -80,14 +149,14 @@ export async function action({ request }: ActionFunctionArgs) {
       });
 
       if (!connection || !connection.organization.members.length) {
-        throw json({ error: 'Connection not found' }, { status: 404 });
+        return json({ error: 'Connection not found' }, { status: 404 });
       }
 
       // Update the connection
       const [updated] = await db.update(databaseConnections)
         .set({
-          name: data.name,
-          credentials: data.credentials,
+          name: updateData.name,
+          config: { ...connection.config, ...updateData.credentials } as ConnectionConfig,
           updatedAt: new Date(),
         })
         .where(eq(databaseConnections.id, id))
@@ -97,7 +166,8 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     case 'DELETE': {
-      const { id } = z.object({ id: z.string() }).parse(await request.json());
+      const deleteSchema = z.object({ id: z.string() });
+      const { id } = deleteSchema.parse(await request.json());
 
       // Verify user has access to the connection
       const connection = await db.query.databaseConnections.findFirst({
@@ -114,7 +184,7 @@ export async function action({ request }: ActionFunctionArgs) {
       });
 
       if (!connection || !connection.organization.members.length) {
-        throw json({ error: 'Connection not found' }, { status: 404 });
+        return json({ error: 'Connection not found' }, { status: 404 });
       }
 
       // Close the connection if it's active
@@ -129,6 +199,6 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     default:
-      throw json({ error: 'Method not allowed' }, { status: 405 });
+      return json({ error: 'Method not allowed' }, { status: 405 });
   }
 }

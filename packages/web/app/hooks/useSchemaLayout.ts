@@ -1,111 +1,97 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Node } from '@xyflow/react';
-import type { ProcessedSchemaTable, RelationshipEdge, SchemaLayout } from '../types/schema';
-import { findRelatedNodes, type LayoutType } from '../utils/schemaLayout';
+import { useNodesState, useEdgesState } from '@xyflow/react';
+import {
+  ProcessedSchemaTable,
+  RelationshipEdgeDataFields,
+  TableNodeData,
+  RelationshipEdgeData,
+  LayoutType,
+} from '../types/schema';
+import { getAutoLayout, getForceLayout, getCircularLayout, getTreeLayout } from '../utils/schemaLayout';
 
-const LAYOUT_STORAGE_KEY = 'schema-layout';
-
-interface UseSchemaLayoutOptions {
-  initialNodes: Node<{ label: string; columns: ProcessedSchemaTable['columns'] }>[];
-  initialEdges: RelationshipEdge[];
-  onLayoutChange?: (layout: SchemaLayout) => void;
+interface UseSchemaLayoutProps {
+  tables: ProcessedSchemaTable[];
+  relationships: RelationshipEdgeDataFields[];
 }
 
-export function useSchemaLayout({
-  initialNodes,
-  initialEdges,
-  onLayoutChange,
-}: UseSchemaLayoutOptions) {
-  const [nodes, setNodes] = useState<Node<{ label: string; columns: ProcessedSchemaTable['columns'] }>[]>(initialNodes);
-  const [edges, setEdges] = useState<RelationshipEdge[]>(initialEdges);
-  const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
+export function useSchemaLayout({ tables, relationships }: UseSchemaLayoutProps) {
   const [selectedLayout, setSelectedLayout] = useState<LayoutType>('auto');
+  const [nodes, setNodes, onNodesChange] = useNodesState<TableNodeData['data']>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<RelationshipEdgeData['data']>([]);
 
-  // Load saved layout on mount
+  const createNodes = useCallback(
+    (tables: ProcessedSchemaTable[]): TableNodeData[] => {
+      return tables.map((table) => ({
+        id: table.id,
+        type: 'table',
+        position: table.position || { x: 0, y: 0 },
+        data: {
+          name: table.name,
+          columns: table.columns,
+          comment: table.comment,
+        },
+      }));
+    },
+    []
+  );
+
+  const createEdges = useCallback(
+    (relationships: RelationshipEdgeDataFields[]): RelationshipEdgeData[] => {
+      return relationships.map((rel, index) => ({
+        id: `e${index}`,
+        source: rel.sourceTable,
+        target: rel.targetTable,
+        type: 'relationship',
+        data: {
+          sourceTable: rel.sourceTable,
+          sourceColumn: rel.sourceColumn,
+          targetTable: rel.targetTable,
+          targetColumn: rel.targetColumn,
+          label: rel.label || `${rel.sourceTable}.${rel.sourceColumn} → ${rel.targetTable}.${rel.targetColumn}`,
+        },
+      }));
+    },
+    []
+  );
+
   useEffect(() => {
-    try {
-      const savedLayout = localStorage.getItem(LAYOUT_STORAGE_KEY);
-      if (savedLayout) {
-        const { nodes: savedNodes } = JSON.parse(savedLayout);
-        // Merge saved positions with current nodes
-        setNodes((current) =>
-          current.map((node) => {
-            const savedNode = savedNodes.find((n: Node) => n.id === node.id);
-            return savedNode
-              ? { ...node, position: savedNode.position }
-              : node;
-          })
-        );
-      }
-    } catch (error) {
-      console.error('Error loading saved layout:', error);
+    const initialNodes = createNodes(tables);
+    const initialEdges = createEdges(relationships);
+
+    let layoutedNodes = initialNodes;
+    switch (selectedLayout) {
+      case 'force':
+        layoutedNodes = getForceLayout(initialNodes, initialEdges);
+        break;
+      case 'circular':
+        layoutedNodes = getCircularLayout(initialNodes);
+        break;
+      case 'horizontal':
+      case 'vertical':
+        layoutedNodes = getTreeLayout(initialNodes, initialEdges, selectedLayout);
+        break;
+      case 'auto':
+      default:
+        layoutedNodes = getAutoLayout(initialNodes);
     }
-  }, []);
 
-  // Save layout when nodes change
-  useEffect(() => {
-    try {
-      const layoutToSave = {
-        nodes: nodes.map(({ id, position }) => ({ id, position })),
-        timestamp: new Date().toISOString(),
-      };
-      localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layoutToSave));
-    } catch (error) {
-      console.error('Error saving layout:', error);
-    }
-  }, [nodes]);
+    setNodes(layoutedNodes);
+    setEdges(initialEdges);
+  }, [tables, relationships, selectedLayout, createNodes, createEdges, setNodes, setEdges]);
 
-  const applyLayout = useCallback(
-    (type: LayoutType, layoutedNodes: Node<{ label: string; columns: ProcessedSchemaTable['columns'] }>[]) => {
-      setSelectedLayout(type);
-      setNodes(layoutedNodes);
-      onLayoutChange?.({ nodes: layoutedNodes, edges });
+  const onLayoutChange = useCallback(
+    (layout: LayoutType) => {
+      setSelectedLayout(layout);
     },
-    [edges, onLayoutChange]
+    []
   );
-
-  const highlightRelatedNodes = useCallback(
-    (nodeIds: string[] | null) => {
-      if (!nodeIds) {
-        setHighlightedNodes(new Set());
-        return;
-      }
-
-      const relatedNodes = new Set<string>();
-      nodeIds.forEach(id => {
-        const related = findRelatedNodes(id, edges);
-        related.forEach(nodeId => relatedNodes.add(nodeId));
-      });
-      setHighlightedNodes(relatedNodes);
-    },
-    [edges]
-  );
-
-  const onNodeDragStop = useCallback(
-    (event: React.MouseEvent, node: Node<{ label: string; columns: ProcessedSchemaTable['columns'] }>) => {
-      const updatedNodes = nodes.map((n) =>
-        n.id === node.id ? { ...n, position: node.position } : n
-      );
-      setNodes(updatedNodes);
-      onLayoutChange?.({ nodes: updatedNodes, edges });
-    },
-    [nodes, edges, onLayoutChange]
-  );
-
-  const resetLayout = useCallback(() => {
-    setNodes(initialNodes);
-    setSelectedLayout('auto');
-    onLayoutChange?.({ nodes: initialNodes, edges });
-  }, [initialNodes, edges, onLayoutChange]);
 
   return {
     nodes,
     edges,
+    onNodesChange,
+    onEdgesChange,
     selectedLayout,
-    highlightedNodes,
-    applyLayout,
-    highlightRelatedNodes,
-    onNodeDragStop,
-    resetLayout,
+    onLayoutChange,
   };
 }

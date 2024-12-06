@@ -1,6 +1,6 @@
 import { json, redirect } from "@remix-run/node";
 import { Outlet } from "@remix-run/react";
-import { getUser } from "../services/auth.server";
+import { getUser } from "../lib/auth/session.server";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import PublicLayout from "../components/PublicLayout";
 

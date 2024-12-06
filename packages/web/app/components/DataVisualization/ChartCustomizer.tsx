@@ -10,28 +10,23 @@ const CHART_TYPE_OPTIONS: { value: ChartType; label: string }[] = [
   { value: 'line', label: 'Line Chart' },
   { value: 'pie', label: 'Pie Chart' },
   { value: 'scatter', label: 'Scatter Plot' },
-];
-
-const COLOR_PRESETS = [
-  '#8884d8',
-  '#82ca9d',
-  '#ffc658',
-  '#ff7300',
-  '#0088fe',
-  '#00c49f',
-  '#ffbb28',
-  '#ff8042',
+  { value: 'area', label: 'Area Chart' },
+  { value: 'stacked-bar', label: 'Stacked Bar Chart' },
+  { value: 'bubble', label: 'Bubble Chart' },
+  { value: 'heatmap', label: 'Heat Map' },
 ];
 
 export function ChartCustomizer({ chartData, onUpdate }: ChartCustomizerProps) {
-  const { chartType, xField, yField, title, color } = chartData;
+  const { chartType, xField, yField, title, customColors = [] } = chartData;
 
   const handleChartTypeChange = (newType: ChartType) => {
     onUpdate({ ...chartData, chartType: newType });
   };
 
-  const handleColorChange = (newColor: string) => {
-    onUpdate({ ...chartData, color: newColor });
+  const handleColorChange = (newColor: string, index: number) => {
+    const newColors = [...(customColors || [])];
+    newColors[index] = newColor;
+    onUpdate({ ...chartData, customColors: newColors });
   };
 
   const handleTitleChange = (newTitle: string) => {
@@ -49,10 +44,10 @@ export function ChartCustomizer({ chartData, onUpdate }: ChartCustomizerProps) {
             <button
               key={option.value}
               onClick={() => handleChartTypeChange(option.value)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              className={`px-3 py-1 rounded-md text-sm ${
                 chartType === option.value
-                  ? 'bg-light-bg-tertiary dark:bg-dark-bg-tertiary text-light-text-primary dark:text-dark-text-primary'
-                  : 'bg-light-bg-primary dark:bg-dark-bg-primary text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-bg-secondary dark:hover:bg-dark-bg-secondary'
+                  ? 'bg-primary text-white'
+                  : 'bg-light-bg-tertiary dark:bg-dark-bg-tertiary text-light-text-primary dark:text-dark-text-primary'
               }`}
             >
               {option.label}
@@ -63,40 +58,31 @@ export function ChartCustomizer({ chartData, onUpdate }: ChartCustomizerProps) {
 
       <div>
         <label className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-1">
-          Chart Title
+          Title
         </label>
         <input
           type="text"
           value={title || ''}
           onChange={e => handleTitleChange(e.target.value)}
+          className="w-full px-3 py-2 rounded-md bg-light-bg-tertiary dark:bg-dark-bg-tertiary text-light-text-primary dark:text-dark-text-primary border border-light-border dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary"
           placeholder="Enter chart title"
-          className="w-full px-3 py-2 rounded-md bg-light-bg-primary dark:bg-dark-bg-primary border border-light-border dark:border-dark-border text-light-text-primary dark:text-dark-text-primary placeholder-light-text-secondary dark:placeholder-dark-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-1">
-          Color
+          Colors
         </label>
         <div className="flex flex-wrap gap-2">
-          {COLOR_PRESETS.map(presetColor => (
-            <button
-              key={presetColor}
-              onClick={() => handleColorChange(presetColor)}
-              className={`w-8 h-8 rounded-full border-2 transition-all ${
-                color === presetColor
-                  ? 'border-primary-500 scale-110'
-                  : 'border-transparent hover:scale-105'
-              }`}
-              style={{ backgroundColor: presetColor }}
+          {[...Array(8)].map((_, index) => (
+            <input
+              key={index}
+              type="color"
+              value={customColors[index] || '#000000'}
+              onChange={e => handleColorChange(e.target.value, index)}
+              className="w-8 h-8 rounded cursor-pointer"
             />
           ))}
-          <input
-            type="color"
-            value={color}
-            onChange={e => handleColorChange(e.target.value)}
-            className="w-8 h-8 rounded-full cursor-pointer"
-          />
         </div>
       </div>
 

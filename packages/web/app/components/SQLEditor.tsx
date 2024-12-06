@@ -17,6 +17,10 @@ interface SQLEditorProps {
   height?: string;
   onError?: (error: string | null) => void;
   schema?: TableSchema[];
+  selectedTables?: Set<string>;
+  databaseAliases?: { alias: string; connectionId: string }[];
+  onExecute?: () => void;
+  isExecuting?: boolean;
 }
 
 // SQL Keywords for auto-completion
@@ -32,7 +36,7 @@ const SQL_KEYWORDS = [
   'ASC', 'DESC', 'LIMIT', 'OFFSET', 'AS'
 ];
 
-function getSQLCompletions(context: CompletionContext, schema?: TableSchema[]): CompletionResult | null {
+function getSQLCompletions(context: CompletionContext, schema?: TableSchema[], databaseAliases?: { alias: string; connectionId: string }[], selectedTables?: Set<string>): CompletionResult | null {
   // Only trigger after space or when explicitly requested
   const triggerChar = context.matchBefore(/\w*$/);
   const previousChar = context.state.doc.sliceString(Math.max(0, context.pos - 1), context.pos);
@@ -81,6 +85,32 @@ function getSQLCompletions(context: CompletionContext, schema?: TableSchema[]): 
         });
       });
     }
+  }
+
+  if (databaseAliases) {
+    // Add database aliases
+    databaseAliases.forEach(({ alias }) => {
+      options.push({
+        label: alias + ".",
+        type: 'keyword',
+        boost: 2
+      });
+    });
+  }
+
+  if (selectedTables) {
+    // Add selected tables with their database aliases
+    selectedTables.forEach((tableKey) => {
+      const [dbId, tableName] = tableKey.split(".");
+      const dbAlias = databaseAliases?.find((da) => da.connectionId === dbId)?.alias;
+      if (dbAlias) {
+        options.push({
+          label: `${dbAlias}.${tableName}`,
+          type: 'property',
+          boost: 3
+        });
+      }
+    });
   }
 
   return {
@@ -159,6 +189,10 @@ export function SQLEditor({
   height = '200px',
   onError,
   schema,
+  selectedTables,
+  databaseAliases,
+  onExecute,
+  isExecuting,
 }: SQLEditorProps) {
   const { isDark } = useTheme();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -198,11 +232,11 @@ export function SQLEditor({
     ];
 
     // Add autocompletion in its own compartment if schema is provided
-    if (schema) {
+    if (schema || databaseAliases || selectedTables) {
       baseExtensions.push(
         completionCompartment.of(
           autocompletion({
-            override: [context => getSQLCompletions(context, schema)],
+            override: [context => getSQLCompletions(context, schema, databaseAliases, selectedTables)],
             closeOnBlur: true,
             defaultKeymap: true,
             maxRenderedOptions: 10,
@@ -224,7 +258,7 @@ export function SQLEditor({
     return () => {
       view.destroy();
     };
-  }, [onChange, height, isDark, schema, sqlLinter]);
+  }, [onChange, height, isDark, schema, sqlLinter, databaseAliases, selectedTables]);
 
   // Handle theme changes
   useEffect(() => {
@@ -260,10 +294,26 @@ export function SQLEditor({
   }, [createEditor]);
 
   return (
-    <div 
-      ref={editorRef} 
-      className={`overflow-hidden rounded-lg border border-light-border dark:border-dark-border ${className}`}
-      style={{ height }}
-    />
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {onExecute && (
+            <button
+              onClick={onExecute}
+              disabled={isExecuting || !value.trim()}
+              className="flex items-center gap-2"
+            >
+              Execute Query
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div 
+        ref={editorRef} 
+        className={`overflow-hidden rounded-lg border border-light-border dark:border-dark-border ${className}`}
+        style={{ height }}
+      />
+    </div>
   );
 }

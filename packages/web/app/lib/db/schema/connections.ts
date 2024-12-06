@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { organizations } from "./organizations";
 import { users } from "./auth";
 import { type DatabaseType } from "../schema";
+import { sql } from 'drizzle-orm';
 
 // Common connection config interface
 export interface BaseConnectionConfig {
@@ -49,10 +50,10 @@ export interface SQLiteConnectionConfig extends BaseConnectionConfig {
 }
 
 export type ConnectionConfig = 
-  | StandardConnectionConfig
-  | MongoDBConnectionConfig
-  | RedisConnectionConfig
-  | SQLiteConnectionConfig;
+  | (StandardConnectionConfig & { type: Exclude<DatabaseType, 'MONGODB' | 'REDIS' | 'SQLITE'> })
+  | (BaseConnectionConfig & { type: 'MONGODB' })
+  | (BaseConnectionConfig & { type: 'REDIS' })
+  | (BaseConnectionConfig & { type: 'SQLITE' });
 
 export const databaseConnections = pgTable("database_connections", {
   id: uuid("id").primaryKey().$defaultFn(() => uuidv4()),
@@ -87,3 +88,27 @@ export const queryHistory = pgTable("query_history", {
 
 export type QueryHistory = typeof queryHistory.$inferSelect;
 export type NewQueryHistory = typeof queryHistory.$inferInsert;
+
+export const connections = pgTable('connections', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  type: text('type').notNull(),
+  config: jsonb('config').notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp('updated_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+  archived: boolean('archived').default(false).notNull(),
+  organizationId: text('organization_id').notNull(),
+});
+
+export const connectionPermissions = pgTable('connection_permissions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  connectionId: text('connection_id').notNull(),
+  organizationId: text('organization_id').notNull(),
+  canRead: boolean('can_read').default(false).notNull(),
+  canWrite: boolean('can_write').default(false).notNull(),
+  canDelete: boolean('can_delete').default(false).notNull(),
+  canGrant: boolean('can_grant').default(false).notNull(),
+  createdAt: timestamp('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp('updated_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
+});

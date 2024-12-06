@@ -5,7 +5,7 @@ import { QueryEngine } from '../lib/db/query-engine.server';
 import { db } from '../lib/db/db.server';
 import { queries } from '../lib/db/schema';
 import type { ConnectionConfig as ManagerConnectionConfig } from '../lib/db/connection-manager.server';
-import { getConnection } from '../services/connections.server';
+import { getConnection } from '../lib/connections/config.server';
 
 function convertToManagerConfig(connection: Awaited<ReturnType<typeof getConnection>>): ManagerConnectionConfig {
   if (!connection) throw new Error('Connection not found');

@@ -1,13 +1,12 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import pkg from 'pg';
-const { Pool } = pkg;
-
-import { env } from '../../env.server';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { Client } from 'pg';
 import * as schema from './schema';
 
+import { env } from '../../env.server';
+
 // Create system database connection pool
-const pool = new Pool({
+const pool = new Client({
   host: env.SYSTEM_DB_HOST,
   port: env.SYSTEM_DB_PORT,
   user: env.SYSTEM_DB_USER,
@@ -16,7 +15,7 @@ const pool = new Pool({
 });
 
 // Create drizzle database instance with schema type
-export const db: NodePgDatabase<typeof schema> = drizzle(pool, {
+export const db = drizzle(pool, {
   schema,
   logger: env.NODE_ENV === 'development',
 });

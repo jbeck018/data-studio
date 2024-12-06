@@ -1,10 +1,10 @@
 import { text, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
-import { createId } from "@paralleldrive/cuid2";
 import { users } from "./auth";
 import { databaseConnections } from "./connections";
+import { v4 as uuidv4 } from "uuid";
 
 export const queries = pgTable("query_history", {
-  id: uuid("id").primaryKey().$defaultFn(() => createId()),
+  id: uuid("id").primaryKey().$defaultFn(() => uuidv4()),
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id),
