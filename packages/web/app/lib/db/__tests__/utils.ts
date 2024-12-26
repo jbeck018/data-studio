@@ -1,126 +1,182 @@
-import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db.server';
-import { databaseConnections } from '../schema/connections';
-import { connectionPermissions } from '../schema/permissions';
-import { users } from '../schema/auth';
-import { organizations } from '../schema/organizations';
-import type { ConnectionConfig } from '../schema/connections';
-import type { QueryRestriction } from '../schema/permissions';
+import { v4 as uuidv4 } from 'uuid';
+import { users, organizations, organizationMembers, connections } from '../schema';
+import type { 
+  User, NewUser,
+  Organization, NewOrganization,
+  OrganizationMember, NewOrganizationMember,
+  DatabaseType,
+  BaseConnectionConfig,
+  StandardConnectionConfig,
+  MongoDBConnectionConfig,
+  RedisConnectionConfig,
+  SQLiteConnectionConfig
+} from '../schema';
+import { hash } from '@node-rs/bcrypt';
+import { createCookieSessionStorage } from '@remix-run/node';
 
-export interface TestUser {
-  id: string;
-  email: string;
-  organizationId: string;
-}
+type ConnectionConfig = StandardConnectionConfig | MongoDBConnectionConfig | RedisConnectionConfig | SQLiteConnectionConfig;
+type Role = 'owner' | 'admin' | 'member';
 
-export interface TestConnection {
-  id: string;
-  name: string;
-  type: string;
-  config: ConnectionConfig;
-}
+const testSessionStorage = createCookieSessionStorage({
+  cookie: {
+    name: 'data_studio_test_session',
+    secrets: ['test-secret'],
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30,
+    httpOnly: true,
+  },
+});
 
-export interface TestPermission {
-  isAdmin?: boolean;
-  canConnect?: boolean;
-  queryRestrictions?: QueryRestriction;
-}
-
-export async function createTestUser(): Promise<TestUser> {
-  const organizationId = uuidv4();
-  const userId = uuidv4();
-  
-  await db.insert(organizations).values({
-    id: organizationId,
-    name: 'Test Organization',
+export async function createTestUser(
+  email: string = 'test@example.com',
+  password: string = 'test-password'
+): Promise<User> {
+  const hashedPassword = await hash(password, 10);
+  const newUser: NewUser = {
+    id: uuidv4(),
+    email,
+    name: 'Test User',
+    hashedPassword,
     createdAt: new Date(),
     updatedAt: new Date(),
-  });
-
-  await db.insert(users).values({
-    id: userId,
-    email: `test-${userId}@example.com`,
-    organizationId,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-
-  return {
-    id: userId,
-    email: `test-${userId}@example.com`,
-    organizationId,
+    lastLogin: null
   };
+
+  const [user] = await db.insert(users)
+    .values(newUser)
+    .returning();
+  return user;
 }
 
-export async function createTestConnection(name: string = 'Test Connection'): Promise<TestConnection> {
-  const connectionId = uuidv4();
-  
-  const connection = {
-    id: connectionId,
+export async function createTestOrganization(
+  name: string = 'Test Organization',
+  createdById?: string
+): Promise<Organization> {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const newOrg: NewOrganization = {
+    id: uuidv4(),
     name,
-    type: 'POSTGRES',
-    config: {
-      type: 'POSTGRES',
-      host: 'localhost',
-      port: 5432,
-      database: 'test_db',
-      username: 'test_user',
-      password: 'test_password',
-    },
+    slug,
+    description: null,
     createdAt: new Date(),
-    updatedAt: new Date(),
-    archived: false,
+    updatedAt: new Date()
   };
 
-  await db.insert(databaseConnections).values(connection);
-
-  return {
-    id: connectionId,
-    name,
-    type: 'POSTGRES',
-    config: connection.config,
-  };
+  const [org] = await db.insert(organizations)
+    .values(newOrg)
+    .returning();
+  return org;
 }
 
-export async function setTestPermissions(
-  connectionId: string,
+export async function createTestOrganizationMember(
   userId: string,
   organizationId: string,
-  permissions: TestPermission
-): Promise<void> {
-  await db.insert(connectionPermissions).values({
+  role: Role = 'member'
+): Promise<OrganizationMember> {
+  const newMember: NewOrganizationMember = {
     id: uuidv4(),
-    connectionId,
     userId,
     organizationId,
-    isAdmin: permissions.isAdmin ?? false,
-    canConnect: permissions.canConnect ?? true,
-    queryRestrictions: permissions.queryRestrictions,
+    role,
     createdAt: new Date(),
-    updatedAt: new Date(),
-  });
+    updatedAt: new Date()
+  };
+
+  const [member] = await db.insert(organizationMembers)
+    .values(newMember)
+    .returning();
+  return member;
 }
 
-export async function cleanupTestData(
-  userId: string,
-  connectionId: string,
-  organizationId: string
-): Promise<void> {
-  await db.delete(connectionPermissions).where(eq => ({
-    userId: eq(connectionPermissions.userId, userId),
-    connectionId: eq(connectionPermissions.connectionId, connectionId),
-    organizationId: eq(connectionPermissions.organizationId, organizationId),
-  }));
+export async function createTestConnection(
+  organizationId: string,
+  createdById: string,
+  config: Partial<ConnectionConfig> = {}
+) {
+  const defaultConfig: StandardConnectionConfig = {
+    type: 'POSTGRES',
+    host: 'localhost',
+    port: 5432,
+    database: 'test',
+    username: 'test',
+    password: 'test',
+    ssl: false
+  };
 
-  await db.delete(databaseConnections).where(eq => ({
-    id: eq(databaseConnections.id, connectionId),
-  }));
+  const mergedConfig = { ...defaultConfig, ...config };
+  const [connection] = await db.insert(connections).values({
+    id: uuidv4(),
+    name: 'Test Connection',
+    type: mergedConfig.type,
+    organizationId,
+    createdById,
+    config: mergedConfig,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    archived: false
+  }).returning();
 
-  await db.delete(users).where(eq => ({
-    id: eq(users.id, userId),
-  }));
+  return connection;
+}
 
-  await db.delete(organizations).where(eq => ({
-    id: eq(organizations.id, organizationId),
-  }));
+export async function createTestUserWithOrg(
+  email?: string,
+  orgName?: string,
+  role: Role = 'owner'
+) {
+  const user = await createTestUser(email);
+  const org = await createTestOrganization(orgName, user.id);
+  const member = await createTestOrganizationMember(user.id, org.id, role);
+  return { user, org, member };
+}
+
+export async function createTestUserWithOrgAndConnection(
+  email?: string,
+  orgName?: string,
+  config: Partial<ConnectionConfig> = {}
+) {
+  const { user, org } = await createTestUserWithOrg(email, orgName);
+  const connection = await createTestConnection(org.id, user.id, config);
+  return { user, org, connection };
+}
+
+interface TestSession {
+  userId: string;
+  organizationId?: string;
+  activeConnectionId?: string;
+  remember?: boolean;
+  expiresAt?: Date;
+}
+
+export async function createTestSession({
+  userId,
+  organizationId,
+  activeConnectionId,
+  remember = false,
+  expiresAt
+}: TestSession) {
+  const session = await testSessionStorage.getSession();
+  session.set('userId', userId);
+  if (organizationId) session.set('organizationId', organizationId);
+  if (activeConnectionId) session.set('activeConnectionId', activeConnectionId);
+  session.set('remember', remember);
+  
+  if (!expiresAt) {
+    expiresAt = remember 
+      ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)  // 30 days
+      : new Date(Date.now() + 24 * 60 * 60 * 1000);      // 24 hours
+  }
+  session.set('expiresAt', expiresAt);
+
+  const cookie = await testSessionStorage.commitSession(session);
+  return { session, cookie };
+}
+
+export async function cleanupTestData() {
+  await db.delete(connections);
+  await db.delete(organizationMembers);
+  await db.delete(organizations);
+  await db.delete(users);
 }

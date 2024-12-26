@@ -1,9 +1,12 @@
-import { Link } from "@remix-run/react";
-import type { TableSchema } from "../types";
-import { startCase, capitalize } from "lodash-es";
+import { useState } from "react";
+import { Input } from "~/components/ui/input";
+import { startCase } from "lodash";
+import type { TableSchema } from "~/types";
 
 interface TableListProps {
   tables: TableSchema[];
+  selectedTable: TableSchema | null;
+  onTableClick: (table: TableSchema) => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -28,59 +31,44 @@ function prettyPrintName(name: string): string {
   return startCase(name.toLowerCase());
 }
 
-export function TableList({ tables }: TableListProps) {
+export function TableList({ tables, selectedTable, onTableClick }: TableListProps) {
+  const [filter, setFilter] = useState("");
+
+  const filteredTables = tables.filter((table) =>
+    table.name.toLowerCase().includes(filter.toLowerCase())
+  );
+
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {tables.map((table) => (
-        <Link
-          key={table.name}
-          to={`/${table.name}`}
-          className="group block w-full p-6 rounded-xl bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 transition-all duration-200 transform hover:-translate-y-1 hover:shadow-xl"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h5 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors truncate max-w-[80%]">
-              {prettyPrintName(table.name)}
-            </h5>
-            <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </span>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                <span className="font-bold">{table.columns.length}</span>{' '}
-                <span className="italic text-gray-500 dark:text-gray-400">columns</span>
-              </p>
-              <div className="mx-3 h-4 w-px bg-gray-300 dark:bg-gray-600" />
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                <span className="font-bold">{formatNumber(table.rowCount)}</span>{' '}
-                <span className="italic text-gray-500 dark:text-gray-400">rows</span>
-              </p>
-              <div className="mx-3 h-4 w-px bg-gray-300 dark:bg-gray-600" />
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                <span className="font-bold">{formatBytes(table.sizeInBytes)}</span>{' '}
-                <span className="italic text-gray-500 dark:text-gray-400">size</span>
-              </p>
-            </div>
-            {Array.isArray(table.primaryKey) && table.primaryKey.length > 0 && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                <span className="font-normal text-gray-500 dark:text-gray-400">Primary Key:</span>{' '}
-                <span className="font-mono text-purple-600 dark:text-purple-400">
-                  {table.primaryKey.map(prettyPrintName).join(", ")}
-                </span>
-              </p>
-            )}
-          </div>
-          <div className="mt-4 flex items-center text-sm text-purple-600 dark:text-purple-400">
-            <span>View table</span>
-            <svg className="flex-shrink-0 w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </Link>
-      ))}
+    <div className="flex flex-col h-full">
+      <div className="p-4">
+        <Input
+          type="text"
+          placeholder="Filter tables..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="w-full"
+        />
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        <ul className="space-y-1 p-2">
+          {filteredTables.map((table) => (
+            <li
+              key={table.name}
+              className={`px-3 py-2 rounded-md cursor-pointer hover:bg-gray-100 ${
+                selectedTable?.name === table.name
+                  ? "bg-gray-100"
+                  : ""
+              }`}
+              onClick={() => onTableClick(table)}
+            >
+              <div className="font-medium">{prettyPrintName(table.name)}</div>
+              <div className="text-xs text-gray-500">
+                {table.columns.length} columns • {formatNumber(table.rowCount)} rows • {formatBytes(table.sizeInBytes)} size
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

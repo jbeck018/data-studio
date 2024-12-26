@@ -51,23 +51,93 @@ export async function fetchSchema(): Promise<TableSchema[]> {
     `);
 
     return result.rows.map(row => ({
+      tableName: row.table_name,
       name: row.table_name,
-      table_name: row.table_name,
       connectionId: row.connection_id,
       columns: row.columns.map(col => ({
-        column_name: col.column_name,
+        columnName: col.column_name,
         name: col.column_name,
         type: col.data_type,
-        data_type: col.data_type,
-        is_nullable: col.is_nullable,
+        dataType: col.data_type,
+        isNullable: col.is_nullable === 'YES',
         nullable: col.is_nullable === 'YES',
-        column_default: col.column_default
+        defaultValue: col.column_default,
       })),
-      primary_key: row.primary_key?.filter(Boolean) || null,
-      foreign_keys: [],
+      primaryKeys: row.primary_key?.filter(Boolean) || null,
+      foreignKeys: [],
       rowCount: 0,
       sizeInBytes: 0
     }));
+  } finally {
+    client.release();
+  }
+}
+
+export async function getTableSchema(tableName: string): Promise<TableSchema[]> {
+  const sanitizedTableName = sanitizeTableName(tableName);
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT 
+        c.table_name,
+        c.column_name,
+        c.data_type,
+        c.is_nullable,
+        c.column_default,
+        tc.constraint_type,
+        kcu.referenced_table_name,
+        kcu.referenced_column_name
+      FROM information_schema.columns c
+      LEFT JOIN information_schema.key_column_usage kcu
+        ON c.table_name = kcu.table_name
+        AND c.column_name = kcu.column_name
+      LEFT JOIN information_schema.table_constraints tc
+        ON kcu.constraint_name = tc.constraint_name
+      WHERE c.table_name = $1
+      ORDER BY c.ordinal_position`,
+      [sanitizedTableName]
+    );
+
+    const columns = result.rows.map((row) => ({
+      columnName: row.column_name,
+      name: row.column_name,
+      type: row.data_type,
+      dataType: row.data_type,
+      isNullable: row.is_nullable === 'YES',
+      nullable: row.is_nullable === 'YES',
+      defaultValue: row.column_default,
+    }));
+
+    const primaryKeys = result.rows
+      .filter((row) => row.constraint_type === 'PRIMARY KEY')
+      .map((row) => row.column_name);
+
+    const foreignKeys = result.rows
+      .filter((row) => row.constraint_type === 'FOREIGN KEY')
+      .map((row) => ({
+        columnName: row.column_name,
+        referencedTable: row.referenced_table_name,
+        referencedColumn: row.referenced_column_name,
+      }));
+
+    const stats = await client.query(
+      `SELECT 
+        pg_total_relation_size($1) as total_bytes,
+        (SELECT reltuples::bigint FROM pg_class WHERE relname = $1) as row_count
+      `,
+      [sanitizedTableName]
+    );
+
+    return [{
+      tableName: sanitizedTableName,
+      name: sanitizedTableName,
+      connectionId: client.id,
+      columns,
+      primaryKeys,
+      foreignKeys,
+      rowCount: parseInt(stats.rows[0].row_count || '0'),
+      sizeInBytes: parseInt(stats.rows[0].total_bytes || '0'),
+    }];
   } finally {
     client.release();
   }
@@ -101,15 +171,20 @@ export async function fetchTableData(
 }
 
 export async function executeQuery(sql: string): Promise<QueryResult> {
+  const startTime = Date.now();
   const client = await pool.connect();
   try {
     const result = await client.query(sql);
+    const endTime = Date.now();
+
     return {
-      rows: result.rows,
-      fields: result.fields.map(field => ({
+      columns: result.fields.map((field) => ({
         name: field.name,
-        dataTypeID: field.dataTypeID
-      }))
+        dataTypeId: field.dataTypeID,
+      })),
+      rows: result.rows,
+      rowCount: result.rowCount || 0,
+      executionTime: endTime - startTime,
     };
   } finally {
     client.release();

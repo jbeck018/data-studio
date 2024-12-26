@@ -7,18 +7,18 @@ import {
   ScrollRestoration,
   useLoaderData,
 } from "@remix-run/react";
-import { LinksFunction, LoaderFunctionArgs, json } from "@remix-run/node";
-import stylesheet from "./tailwind.css?url";
+import { json, LoaderFunction } from "@remix-run/node";
+import styles from "./tailwind.css";
 import { ThemeProvider } from "./utils/theme";
 import Layout from "./components/Layout";
 import { loader as connectionLoader } from "./routes/connections.state";
 
-export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: stylesheet },
+export const links: any = () => [
+  { rel: "stylesheet", href: styles },
   { rel: "icon", type: "image/svg+xml", href: "/assets/favicon.svg" },
 ];
 
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader({ request }: any) {
   const connectionState = await connectionLoader({ request, params: {}, context: {} });
   const { connections, activeConnection } = connectionState;
 

@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2015",
     "module": "ESNext",
     "moduleResolution": "node",
-    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "lib": ["ES2015", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "strict": true,
     "noEmit": true,

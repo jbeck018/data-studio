@@ -1,32 +1,51 @@
 import { db } from './db.server';
 import { eq, and } from 'drizzle-orm';
-import { organizationMembers, connectionPermissions } from './schema';
-import type { QueryRestriction } from './types';
+import { connectionPermissions } from './schema/permissions';
+import { organizationMembers } from './schema/organizations';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface ConnectionPermission {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
   userId: string;
   organizationId: string;
   connectionId: string;
-  isAdmin: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  canRead: boolean;
+  canWrite: boolean;
+  canDelete: boolean;
+  canGrant: boolean;
+}
+
+export type SQLOperation = 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'CREATE' | 'DROP' | 'ALTER';
+
+export interface QueryRestrictions {
+  maxRowsPerQuery: number;
+  allowedSchemas: string[];
+  allowedTables: string[];
+  allowedOperations: SQLOperation[];
 }
 
 export class PermissionsManager {
-  async hasConnectionAccess(
-    userId: string,
-    organizationId: string,
-    connectionId: string
-  ): Promise<boolean> {
-    const permissions = await db.query.connectionPermissions.findFirst({
-      where: and(
-        eq(connectionPermissions.userId, userId),
-        eq(connectionPermissions.organizationId, organizationId),
-        eq(connectionPermissions.connectionId, connectionId)
-      ),
-    });
+  private defaultRestrictions: QueryRestrictions = {
+    maxRowsPerQuery: 1000,
+    allowedSchemas: ['public'],
+    allowedTables: [],
+    allowedOperations: ['SELECT', 'INSERT', 'UPDATE', 'DELETE'],
+  };
 
-    return !!permissions;
+  async hasConnectionPermission(userId: string, connectionId: string): Promise<boolean> {
+    const result = await db.select()
+      .from(connectionPermissions)
+      .where(
+        and(
+          eq(connectionPermissions.userId, userId),
+          eq(connectionPermissions.connectionId, connectionId)
+        )
+      )
+      .limit(1);
+
+    return result.length > 0;
   }
 
   async isConnectionAdmin(
@@ -34,15 +53,18 @@ export class PermissionsManager {
     organizationId: string,
     connectionId: string
   ): Promise<boolean> {
-    const permissions = await db.query.connectionPermissions.findFirst({
-      where: and(
-        eq(connectionPermissions.userId, userId),
-        eq(connectionPermissions.organizationId, organizationId),
-        eq(connectionPermissions.connectionId, connectionId)
-      ),
-    });
+    const result = await db.select()
+      .from(connectionPermissions)
+      .where(
+        and(
+          eq(connectionPermissions.userId, userId),
+          eq(connectionPermissions.organizationId, organizationId),
+          eq(connectionPermissions.connectionId, connectionId)
+        )
+      )
+      .limit(1);
 
-    return permissions?.isAdmin ?? false;
+    return result[0]?.canGrant ?? false;
   }
 
   async getConnectionPermissions(
@@ -50,13 +72,18 @@ export class PermissionsManager {
     organizationId: string,
     connectionId: string
   ): Promise<ConnectionPermission | null> {
-    return db.query.connectionPermissions.findFirst({
-      where: and(
-        eq(connectionPermissions.userId, userId),
-        eq(connectionPermissions.organizationId, organizationId),
-        eq(connectionPermissions.connectionId, connectionId)
-      ),
-    });
+    const result = await db.select()
+      .from(connectionPermissions)
+      .where(
+        and(
+          eq(connectionPermissions.userId, userId),
+          eq(connectionPermissions.organizationId, organizationId),
+          eq(connectionPermissions.connectionId, connectionId)
+        )
+      )
+      .limit(1);
+
+    return result[0] || null;
   }
 
   async updateConnectionPermissions(
@@ -70,27 +97,89 @@ export class PermissionsManager {
         ...updates,
         updatedAt: new Date(),
       })
-      .where(and(
-        eq(connectionPermissions.userId, userId),
-        eq(connectionPermissions.organizationId, organizationId),
-        eq(connectionPermissions.connectionId, connectionId)
-      ));
+      .where(
+        and(
+          eq(connectionPermissions.userId, userId),
+          eq(connectionPermissions.organizationId, organizationId),
+          eq(connectionPermissions.connectionId, connectionId)
+        )
+      );
   }
 
-  async grantConnectionAccess(
+  async grantConnectionPermission(
+    connectionId: string,
     userId: string,
     organizationId: string,
+    permissions: {
+      canRead?: boolean;
+      canWrite?: boolean;
+      canDelete?: boolean;
+      canGrant?: boolean;
+    }
+  ): Promise<ConnectionPermission> {
+    const [permission] = await db.insert(connectionPermissions)
+      .values({
+        id: uuidv4(),
+        userId,
+        organizationId,
+        connectionId,
+        canRead: permissions.canRead ?? false,
+        canWrite: permissions.canWrite ?? false,
+        canDelete: permissions.canDelete ?? false,
+        canGrant: permissions.canGrant ?? false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    return permission;
+  }
+
+  async revokeConnectionPermission(
     connectionId: string,
-    isAdmin: boolean = false
+    userId: string
   ): Promise<void> {
-    await db.insert(connectionPermissions).values({
-      userId,
-      organizationId,
-      connectionId,
-      isAdmin,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    await db.delete(connectionPermissions)
+      .where(
+        and(
+          eq(connectionPermissions.userId, userId),
+          eq(connectionPermissions.connectionId, connectionId)
+        )
+      );
+  }
+
+  getQueryRestrictions(userId: string, organizationId: string): QueryRestrictions {
+    // TODO: Implement per-user/organization restrictions
+    return this.defaultRestrictions;
+  }
+
+  async validateQuery(
+    sql: string,
+    userId: string,
+    organizationId: string
+  ): Promise<{ isValid: boolean; error?: string }> {
+    try {
+      const restrictions = this.getQueryRestrictions(userId, organizationId);
+      
+      // TODO: Implement proper SQL validation
+      // For now, just check if it's not empty
+      if (!sql.trim()) {
+        return {
+          isValid: false,
+          error: 'Query cannot be empty'
+        };
+      }
+
+      return {
+        isValid: true
+      };
+    } catch (error) {
+      const err = error as Error;
+      return {
+        isValid: false,
+        error: err.message
+      };
+    }
   }
 }
 

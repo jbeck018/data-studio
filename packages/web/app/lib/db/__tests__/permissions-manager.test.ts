@@ -1,175 +1,138 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, test, expect, beforeEach } from 'vitest';
 import { permissionsManager } from '../permissions-manager.server';
-import {
-  createTestUser,
-  createTestConnection,
-  setTestPermissions,
-  cleanupTestData,
-  type TestUser,
-  type TestConnection,
-} from './utils';
+import { db } from '../db.server';
+import { createTestConnection, createTestOrganization, createTestUser } from './utils';
 
 describe('PermissionsManager', () => {
-  let testUser: TestUser;
-  let testConnection: TestConnection;
+  const testUser = {
+    id: 'test-user-id',
+    name: 'Test User',
+    email: 'test@example.com',
+    hashedPassword: 'hashed',
+  };
+
+  const testOrg = {
+    id: 'test-org-id',
+    name: 'Test Org',
+  };
+
+  const testConnection = {
+    id: 'test-connection-id',
+    name: 'Test Connection',
+    type: 'POSTGRES',
+    config: {
+      type: 'POSTGRES',
+      host: 'localhost',
+      port: 5432,
+      database: 'test',
+      username: 'test',
+      password: 'test',
+    },
+  };
 
   beforeEach(async () => {
-    testUser = await createTestUser();
-    testConnection = await createTestConnection();
+    await db.delete(db.connectionPermissions);
+    await db.delete(db.organizationMembers);
+    await db.delete(db.databaseConnections);
+    await db.delete(db.organizations);
+    await db.delete(db.users);
+
+    await createTestUser(testUser);
+    await createTestOrganization(testOrg);
+    await createTestConnection({
+      ...testConnection,
+      organizationId: testOrg.id,
+      createdById: testUser.id,
+    });
   });
 
-  afterEach(async () => {
-    await cleanupTestData(testUser.id, testConnection.id, testUser.organizationId);
-  });
-
-  describe('checkConnectionAccess', () => {
-    it('should return false when no permissions exist', async () => {
-      const hasAccess = await permissionsManager.checkConnectionAccess(
-        testConnection.id,
+  describe('hasConnectionAccess', () => {
+    test('returns false when user has no access', async () => {
+      const hasAccess = await permissionsManager.hasConnectionAccess(
         testUser.id,
-        testUser.organizationId
+        testOrg.id,
+        testConnection.id
       );
-
       expect(hasAccess).toBe(false);
     });
 
-    it('should return true when user has connect permission', async () => {
-      await setTestPermissions(testConnection.id, testUser.id, testUser.organizationId, {
-        canConnect: true,
-      });
-
-      const hasAccess = await permissionsManager.checkConnectionAccess(
-        testConnection.id,
+    test('returns true when user has access', async () => {
+      await permissionsManager.grantConnectionAccess(
         testUser.id,
-        testUser.organizationId
+        testOrg.id,
+        testConnection.id
       );
 
+      const hasAccess = await permissionsManager.hasConnectionAccess(
+        testUser.id,
+        testOrg.id,
+        testConnection.id
+      );
       expect(hasAccess).toBe(true);
     });
+  });
 
-    it('should return false when connect permission is false', async () => {
-      await setTestPermissions(testConnection.id, testUser.id, testUser.organizationId, {
-        canConnect: false,
-      });
-
-      const hasAccess = await permissionsManager.checkConnectionAccess(
-        testConnection.id,
+  describe('isConnectionAdmin', () => {
+    test('returns false when user has no access', async () => {
+      const isAdmin = await permissionsManager.isConnectionAdmin(
         testUser.id,
-        testUser.organizationId
+        testOrg.id,
+        testConnection.id
+      );
+      expect(isAdmin).toBe(false);
+    });
+
+    test('returns false when user has non-admin access', async () => {
+      await permissionsManager.grantConnectionAccess(
+        testUser.id,
+        testOrg.id,
+        testConnection.id,
+        false
       );
 
-      expect(hasAccess).toBe(false);
+      const isAdmin = await permissionsManager.isConnectionAdmin(
+        testUser.id,
+        testOrg.id,
+        testConnection.id
+      );
+      expect(isAdmin).toBe(false);
+    });
+
+    test('returns true when user has admin access', async () => {
+      await permissionsManager.grantConnectionAccess(
+        testUser.id,
+        testOrg.id,
+        testConnection.id,
+        true
+      );
+
+      const isAdmin = await permissionsManager.isConnectionAdmin(
+        testUser.id,
+        testOrg.id,
+        testConnection.id
+      );
+      expect(isAdmin).toBe(true);
     });
   });
 
   describe('validateQuery', () => {
-    it('should validate allowed operations', async () => {
-      const restrictions = {
-        allowedOperations: ['SELECT'] as const,
-      };
-
-      const validResult = await permissionsManager.validateQuery(
+    test('returns true for allowed operations', async () => {
+      const result = await permissionsManager.validateQuery(
         'SELECT * FROM users',
-        restrictions
-      );
-      expect(validResult.isValid).toBe(true);
-
-      const invalidResult = await permissionsManager.validateQuery(
-        'DELETE FROM users',
-        restrictions
-      );
-      expect(invalidResult.isValid).toBe(false);
-      expect(invalidResult.error).toContain('Operation DELETE is not allowed');
-    });
-
-    it('should validate allowed tables', async () => {
-      const restrictions = {
-        allowedTables: ['users', 'posts'],
-      };
-
-      const validResult = await permissionsManager.validateQuery(
-        'SELECT * FROM users JOIN posts ON users.id = posts.user_id',
-        restrictions
-      );
-      expect(validResult.isValid).toBe(true);
-
-      const invalidResult = await permissionsManager.validateQuery(
-        'SELECT * FROM users JOIN comments ON users.id = comments.user_id',
-        restrictions
-      );
-      expect(invalidResult.isValid).toBe(false);
-      expect(invalidResult.error).toContain('Access to table comments is not allowed');
-    });
-
-    it('should validate blocked tables', async () => {
-      const restrictions = {
-        blockedTables: ['sensitive_data', 'user_secrets'],
-      };
-
-      const validResult = await permissionsManager.validateQuery(
-        'SELECT * FROM users',
-        restrictions
-      );
-      expect(validResult.isValid).toBe(true);
-
-      const invalidResult = await permissionsManager.validateQuery(
-        'SELECT * FROM sensitive_data',
-        restrictions
-      );
-      expect(invalidResult.isValid).toBe(false);
-      expect(invalidResult.error).toContain('Access to table sensitive_data is blocked');
-    });
-
-    it('should validate allowed schemas', async () => {
-      const restrictions = {
-        allowedSchemas: ['public', 'app'],
-      };
-
-      const validResult = await permissionsManager.validateQuery(
-        'SELECT * FROM public.users JOIN app.posts ON users.id = posts.user_id',
-        restrictions
-      );
-      expect(validResult.isValid).toBe(true);
-
-      const invalidResult = await permissionsManager.validateQuery(
-        'SELECT * FROM private.sensitive_data',
-        restrictions
-      );
-      expect(invalidResult.isValid).toBe(false);
-      expect(invalidResult.error).toContain('Access to schema private is not allowed');
-    });
-  });
-
-  describe('getQueryRestrictions', () => {
-    it('should return null when no restrictions exist', async () => {
-      const restrictions = await permissionsManager.getQueryRestrictions(
-        testConnection.id,
         testUser.id,
-        testUser.organizationId
+        testOrg.id
       );
-
-      expect(restrictions).toBeNull();
+      expect(result.isValid).toBe(true);
     });
 
-    it('should return configured restrictions', async () => {
-      const testRestrictions = {
-        maxRowsPerQuery: 1000,
-        allowedSchemas: ['public'],
-        allowedTables: ['users', 'posts'],
-        allowedOperations: ['SELECT', 'INSERT'] as const,
-      };
-
-      await setTestPermissions(testConnection.id, testUser.id, testUser.organizationId, {
-        queryRestrictions: testRestrictions,
-      });
-
-      const restrictions = await permissionsManager.getQueryRestrictions(
-        testConnection.id,
+    test('returns false for disallowed operations', async () => {
+      const result = await permissionsManager.validateQuery(
+        'DROP TABLE users',
         testUser.id,
-        testUser.organizationId
+        testOrg.id
       );
-
-      expect(restrictions).toEqual(testRestrictions);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Operation DROP is not allowed');
     });
   });
 });

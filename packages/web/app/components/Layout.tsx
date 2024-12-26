@@ -29,7 +29,7 @@ interface LayoutProps {
   activeConnection?: DatabaseConnection | null;
 }
 
-export default function Layout({ children, user, connections = [], activeConnection }: LayoutProps) {
+export default function Layout({ children, user, connections = [], activeConnection = null }: LayoutProps) {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const submit = useSubmit();
@@ -70,7 +70,7 @@ export default function Layout({ children, user, connections = [], activeConnect
             <div className="mt-4 px-4 space-y-2">
               <ConnectionSelector
                 connections={connections}
-                activeConnection={activeConnection}
+                activeConnectionId={activeConnection?.id}
                 onConnectionChange={handleConnectionChange}
               />
               <ConnectionStatus connection={activeConnection} />

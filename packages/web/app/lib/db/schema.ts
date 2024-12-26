@@ -1,63 +1,65 @@
-// Export database types
-export const DATABASE_TYPES = ['POSTGRES', 'MYSQL', 'SQLITE', 'MSSQL', 'ORACLE', 'MONGODB', 'REDIS'] as const;
-export type DatabaseType = typeof DATABASE_TYPES[number];
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { Pool } from "pg";
+import { relations } from "drizzle-orm";
 
-// Re-export all schemas and types
-export * from './schema/organizations';
-export * from './schema/auth';
-export * from './schema/connections';
-export * from './schema/queries';
+// Import schema components
+import * as auth from "./schema/auth";
+import * as organizations from "./schema/organizations";
+import * as connections from "./schema/connections";
 
-// Import for relations
-import { relations } from 'drizzle-orm';
-import { organizations, organizationMembers } from './schema/organizations';
-import { users } from './schema/auth';
-import { databaseConnections } from './schema/connections';
-import { connectionPermissions } from './schema/connections';
+// Re-export all schema components
+export * from "./schema/auth";
+export * from "./schema/organizations";
+export * from "./schema/connections";
 
-// Organization relations
-export const organizationsRelations = relations(organizations, ({ many }) => ({
-  members: many(organizationMembers),
-  connections: many(databaseConnections),
+// Create pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+// Define schema
+export const schema = {
+  ...auth,
+  ...organizations,
+  ...connections,
+};
+
+// Define relations
+export const usersRelations = relations(auth.users, ({ many }) => ({
+  organizationMemberships: many(organizations.organizationMemberships),
+  databaseConnections: many(connections.databaseConnections),
 }));
 
-// User relations
-export const usersRelations = relations(users, ({ many }) => ({
-  organizationMemberships: many(organizationMembers),
+export const organizationsRelations = relations(organizations.organizations, ({ many }) => ({
+  members: many(organizations.organizationMemberships),
+  connections: many(connections.databaseConnections),
 }));
 
-// Organization member relations
-export const organizationMembersRelations = relations(organizationMembers, ({ one }) => ({
-  organization: one(organizations, {
-    fields: [organizationMembers.organizationId],
-    references: [organizations.id],
+export const organizationMembershipsRelations = relations(organizations.organizationMemberships, ({ one }) => ({
+  user: one(auth.users, {
+    fields: [organizations.organizationMemberships.userId],
+    references: [auth.users.id],
   }),
-  user: one(users, {
-    fields: [organizationMembers.userId],
-    references: [users.id],
-  }),
-}));
-
-// Database connection relations
-export const databaseConnectionsRelations = relations(databaseConnections, ({ one }) => ({
-  organization: one(organizations, {
-    fields: [databaseConnections.organizationId],
-    references: [organizations.id],
+  organization: one(organizations.organizations, {
+    fields: [organizations.organizationMemberships.organizationId],
+    references: [organizations.organizations.id],
   }),
 }));
 
-// Connection permissions relations
-export const connectionPermissionsRelations = relations(connectionPermissions, ({ one }) => ({
-  user: one(users, {
-    fields: [connectionPermissions.userId],
-    references: [users.id],
+export const databaseConnectionsRelations = relations(connections.databaseConnections, ({ one }) => ({
+  organization: one(organizations.organizations, {
+    fields: [connections.databaseConnections.organizationId],
+    references: [organizations.organizations.id],
   }),
-  organization: one(organizations, {
-    fields: [connectionPermissions.organizationId],
-    references: [organizations.id],
-  }),
-  connection: one(databaseConnections, {
-    fields: [connectionPermissions.connectionId],
-    references: [databaseConnections.id],
+  createdBy: one(auth.users, {
+    fields: [connections.databaseConnections.createdById],
+    references: [auth.users.id],
   }),
 }));
+
+// Create db instance
+export const db = drizzle(pool, { schema });
+
+// Export types
+export type Database = typeof db;

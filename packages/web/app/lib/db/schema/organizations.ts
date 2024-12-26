@@ -1,30 +1,69 @@
-import { text, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
-import { v4 as uuidv4 } from "uuid";
+import { relations } from "drizzle-orm";
+import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { z } from "zod";
 import { users } from "./auth";
 
+export enum OrganizationRole {
+  OWNER = "owner",
+  ADMIN = "admin",
+  MEMBER = "member",
+  VIEWER = "viewer",
+}
+
 export const organizations = pgTable("organizations", {
-  id: uuid("id").primaryKey().$defaultFn(() => uuidv4()),
+  id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const organizationMembers = pgTable("organization_members", {
-  id: uuid("id").primaryKey().$defaultFn(() => uuidv4()),
+export const organizationMemberships = pgTable("organization_memberships", {
+  id: uuid("id").primaryKey(),
   organizationId: uuid("organization_id")
     .notNull()
-    .references(() => organizations.id, { onDelete: "cascade" }),
+    .references(() => organizations.id),
   userId: uuid("user_id")
     .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  role: text("role", { enum: ["owner", "admin", "member"] }).notNull().default("member"),
+    .references(() => users.id),
+  role: text("role", { enum: ["OWNER", "ADMIN", "MEMBER", "VIEWER"] }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const organizationsRelations = relations(organizations, ({ many }) => ({
+  users: many(users),
+  members: many(organizationMemberships),
+}));
+
+export const organizationMembershipsRelations = relations(
+  organizationMemberships,
+  ({ one }) => ({
+    organization: one(organizations, {
+      fields: [organizationMemberships.organizationId],
+      references: [organizations.id],
+    }),
+    user: one(users, {
+      fields: [organizationMemberships.userId],
+      references: [users.id],
+    }),
+  })
+);
+
+// Zod schemas for validation
+export const insertOrganizationSchema = createInsertSchema(organizations);
+export const selectOrganizationSchema = createSelectSchema(organizations);
+
+export const insertOrganizationMembershipSchema = createInsertSchema(organizationMemberships, {
+  role: z.enum(["OWNER", "ADMIN", "MEMBER", "VIEWER"]),
+});
+export const selectOrganizationMembershipSchema = createSelectSchema(organizationMemberships, {
+  role: z.enum(["OWNER", "ADMIN", "MEMBER", "VIEWER"]),
+});
+
+// Types
 export type Organization = typeof organizations.$inferSelect;
 export type NewOrganization = typeof organizations.$inferInsert;
-export type OrganizationMember = typeof organizationMembers.$inferSelect;
-export type NewOrganizationMember = typeof organizationMembers.$inferInsert;
+
+export type OrganizationMembership = z.infer<typeof selectOrganizationMembershipSchema>;
+export type NewOrganizationMembership = z.infer<typeof insertOrganizationMembershipSchema>;

@@ -1,7 +1,19 @@
-import { EdgeProps, getBezierPath } from '@xyflow/react';
+import { memo } from 'react';
+import { EdgeProps, getBezierPath, Position } from '@xyflow/react';
 import { RelationshipEdgeData } from '../../types/schema';
 
-export default function RelationshipEdge({
+interface RelationshipEdgeProps {
+  id: string;
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
+  sourcePosition: Position;
+  targetPosition: Position;
+  data: RelationshipEdgeData;
+}
+
+function RelationshipEdge({
   id,
   sourceX,
   sourceY,
@@ -9,12 +21,8 @@ export default function RelationshipEdge({
   targetY,
   sourcePosition,
   targetPosition,
-  style = {},
-  markerEnd,
   data,
-}: EdgeProps<RelationshipEdgeData>) {
-  if (!data) return null;
-
+}: RelationshipEdgeProps) {
   const [edgePath] = getBezierPath({
     sourceX,
     sourceY,
@@ -24,28 +32,31 @@ export default function RelationshipEdge({
     targetPosition,
   });
 
-  const label = data.label || `${data.sourceTable}.${data.sourceColumn} → ${data.targetTable}.${data.targetColumn}`;
-
   return (
     <>
       <path
         id={id}
-        style={style}
-        className="react-flow__edge-path stroke-light-border dark:stroke-dark-border"
+        className="react-flow__edge-path"
         d={edgePath}
-        markerEnd={markerEnd}
+        strokeWidth={2}
+        stroke="#b1b1b7"
+        markerEnd="url(#arrow)"
       />
-      <text>
-        <textPath
-          href={`#${id}`}
-          style={{ fontSize: 12 }}
-          startOffset="50%"
-          textAnchor="middle"
-          className="fill-light-text-secondary dark:fill-dark-text-secondary"
-        >
-          {label}
-        </textPath>
-      </text>
+      {data.label && (
+        <text>
+          <textPath
+            href={`#${id}`}
+            style={{ fontSize: '12px' }}
+            startOffset="50%"
+            textAnchor="middle"
+            className="text-gray-500"
+          >
+            {data.label}
+          </textPath>
+        </text>
+      )}
     </>
   );
 }
+
+export default memo(RelationshipEdge);

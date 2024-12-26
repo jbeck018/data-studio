@@ -230,6 +230,26 @@ export class QueryTemplateProcessor {
   }
 }
 
+function replaceParams(query: string, params: Record<string, any>): string {
+  return query.replace(/\$\{(\w+)\}/g, (_, key) => {
+    if (key in params) {
+      const value = params[key];
+      return typeof value === 'string' ? `'${value}'` : String(value);
+    }
+    return '${' + key + '}';
+  });
+}
+
+function getRelationshipData(rel: any) {
+  if (!rel.data) return null;
+  return {
+    sourceTable: rel.data.sourceTable,
+    targetTable: rel.data.targetTable,
+    sourceColumn: rel.data.sourceColumn,
+    targetColumn: rel.data.targetColumn,
+  };
+}
+
 /**
  * Seeds the query_patterns table with common patterns
  */

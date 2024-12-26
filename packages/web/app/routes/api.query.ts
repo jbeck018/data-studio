@@ -6,6 +6,7 @@ import { db } from '../lib/db/db.server';
 import { queries } from '../lib/db/schema';
 import type { ConnectionConfig as ManagerConnectionConfig } from '../lib/db/connection-manager.server';
 import { getConnection } from '../lib/connections/config.server';
+import type { DatabaseConnection, QueryResult } from "~/types";
 
 function convertToManagerConfig(connection: Awaited<ReturnType<typeof getConnection>>): ManagerConnectionConfig {
   if (!connection) throw new Error('Connection not found');
@@ -26,6 +27,49 @@ function convertToManagerConfig(connection: Awaited<ReturnType<typeof getConnect
     password: connection.config.password || '',
     ssl: connection.config.ssl || false,
   };
+}
+
+export class QueryEngine {
+  private connection: DatabaseConnection;
+
+  constructor(connection: DatabaseConnection) {
+    this.connection = connection;
+  }
+
+  async execute(query: string): Promise<QueryResult> {
+    const pool = await getConnectionPool(this.connection);
+    const client = await pool.connect();
+
+    try {
+      const startTime = Date.now();
+      const result = await client.query(query);
+      const endTime = Date.now();
+
+      return {
+        rows: result.rows,
+        rowCount: result.rowCount || 0,
+        fields: result.fields.map(field => ({
+          name: field.name,
+          type: field.dataTypeID.toString()
+        })),
+        metrics: {
+          executionTimeMs: endTime - startTime,
+          bytesProcessed: 0 // Not available in pg
+        }
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  async startStreamingQuery(sql: string, options: any): Promise<string> {
+    // This method is not updated in the provided code edit, 
+    // so it's assumed to be the same as in the original code
+    // If it needs to be updated, please provide the updated code
+    const queryId = await this.execute(sql);
+    // ...
+    return queryId;
+  }
 }
 
 export async function action({ request }: ActionFunctionArgs) {

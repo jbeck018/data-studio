@@ -155,6 +155,14 @@ export class WebSocketManager {
     });
   }
 
+  public send(userId: string, message: WebSocketMessage) {
+    this.wss.clients.forEach((client: AuthenticatedWebSocket) => {
+      if (client.userId === userId) {
+        client.send(JSON.stringify(message));
+      }
+    });
+  }
+
   public handleUpgrade(request: IncomingMessage, socket: any, head: Buffer) {
     authenticateWebSocket(this.wss, request)
       .then(() => {

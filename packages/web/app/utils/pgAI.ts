@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import type { ProcessedSchemaTable } from '../types/schema';
+import type { ProcessedSchemaTable, TableNodeData, Column } from '../types/schema';
 
 export interface SchemaInfo {
   table_name: string;
@@ -110,7 +110,6 @@ export class PgAI {
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )
       `);
-
     } finally {
       client.release();
     }
@@ -136,15 +135,15 @@ export class PgAI {
         const tableDesc = this.generateTableDescription(table);
         await client.query(
           'INSERT INTO schema_embeddings (table_name, description, embedding) VALUES ($1, $2, pg_ai_embed($2))',
-          [table.name, tableDesc]
+          [table.data.name, tableDesc]
         );
 
         // Column description embeddings
-        for (const column of table.columns) {
-          const columnDesc = this.generateColumnDescription(table.name, column);
+        for (const column of table.data.columns) {
+          const columnDesc = this.generateColumnDescription(table.data.name, column);
           await client.query(
             'INSERT INTO schema_embeddings (table_name, column_name, description, embedding) VALUES ($1, $2, $3, pg_ai_embed($3))',
-            [table.name, column.name, columnDesc]
+            [table.data.name, column.name, columnDesc]
           );
         }
       }
@@ -193,7 +192,7 @@ export class PgAI {
    * Finds query patterns similar to the input query
    */
   public async findSimilarQueryPatterns(query: string): Promise<QueryPattern[]> {
-    const result = await this.pool.query<QueryPattern>(`
+    const result = await this.pool.query<QueryPattern & { metadata: string }>(`
       SELECT 
         pattern_text,
         sql_template,
@@ -206,7 +205,13 @@ export class PgAI {
       LIMIT 3
     `, [query, this.config.similarityThreshold]);
 
-    return result.rows;
+    return result.rows.map(row => ({
+      pattern_text: row.pattern_text,
+      sql_template: row.sql_template,
+      description: row.description,
+      similarity: row.similarity,
+      metadata: row.metadata
+    }));
   }
 
   /**
@@ -225,16 +230,16 @@ export class PgAI {
   }
 
   private generateTableDescription(table: ProcessedSchemaTable): string {
-    const columnList = table.columns
+    const columnList = table.data.columns
       .map(col => `${col.name} (${col.type}${col.isPrimaryKey ? ', primary key' : ''}${col.isForeignKey ? ', foreign key' : ''})`)
       .join(', ');
     
-    return `Table ${table.name} with columns: ${columnList}`;
+    return `Table ${table.data.name} with columns: ${columnList}`;
   }
 
   private generateColumnDescription(
     tableName: string, 
-    column: ProcessedSchemaTable['columns'][0]
+    column: Column
   ): string {
     let desc = `Column ${column.name} in table ${tableName} of type ${column.type}`;
     if (column.isPrimaryKey) desc += ', serves as the primary key';

@@ -1,89 +1,89 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNodesState, useEdgesState } from '@xyflow/react';
+import { useCallback, useState } from 'react';
+import { Edge, Node, NodeChange, EdgeChange, useNodesState, useEdgesState } from '@xyflow/react';
+import dagre from 'dagre';
 import {
-  ProcessedSchemaTable,
-  RelationshipEdgeDataFields,
   TableNodeData,
   RelationshipEdgeData,
+  ProcessedSchemaTable,
   LayoutType,
+  TableNode,
+  RelationshipEdge,
 } from '../types/schema';
-import { getAutoLayout, getForceLayout, getCircularLayout, getTreeLayout } from '../utils/schemaLayout';
 
 interface UseSchemaLayoutProps {
   tables: ProcessedSchemaTable[];
-  relationships: RelationshipEdgeDataFields[];
+  relationships: RelationshipEdgeData[];
 }
 
+const dagreGraph = new dagre.graphlib.Graph();
+dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+const getLayoutedElements = (
+  nodes: TableNode[],
+  edges: RelationshipEdge[],
+  direction: LayoutType = 'TB'
+) => {
+  const isHorizontal = direction === 'LR';
+  dagreGraph.setGraph({ rankdir: direction });
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: 200, height: 100 });
+  });
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  const layoutedNodes = nodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    return {
+      ...node,
+      position: {
+        x: nodeWithPosition.x,
+        y: nodeWithPosition.y,
+      },
+    };
+  });
+
+  return { nodes: layoutedNodes, edges };
+};
+
 export function useSchemaLayout({ tables, relationships }: UseSchemaLayoutProps) {
-  const [selectedLayout, setSelectedLayout] = useState<LayoutType>('auto');
-  const [nodes, setNodes, onNodesChange] = useNodesState<TableNodeData['data']>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<RelationshipEdgeData['data']>([]);
-
-  const createNodes = useCallback(
-    (tables: ProcessedSchemaTable[]): TableNodeData[] => {
-      return tables.map((table) => ({
-        id: table.id,
-        type: 'table',
-        position: table.position || { x: 0, y: 0 },
-        data: {
-          name: table.name,
-          columns: table.columns,
-          comment: table.comment,
-        },
-      }));
-    },
-    []
+  const [nodes, setNodes, onNodesChange] = useNodesState<TableNode>(
+    tables.map((table) => ({
+      id: table.id,
+      type: 'table',
+      position: table.position,
+      data: table.data,
+    }))
   );
 
-  const createEdges = useCallback(
-    (relationships: RelationshipEdgeDataFields[]): RelationshipEdgeData[] => {
-      return relationships.map((rel, index) => ({
-        id: `e${index}`,
-        source: rel.sourceTable,
-        target: rel.targetTable,
-        type: 'relationship',
-        data: {
-          sourceTable: rel.sourceTable,
-          sourceColumn: rel.sourceColumn,
-          targetTable: rel.targetTable,
-          targetColumn: rel.targetColumn,
-          label: rel.label || `${rel.sourceTable}.${rel.sourceColumn} → ${rel.targetTable}.${rel.targetColumn}`,
-        },
-      }));
-    },
-    []
+  const [edges, setEdges, onEdgesChange] = useEdgesState<RelationshipEdge>(
+    relationships.map((rel) => ({
+      id: rel.id,
+      source: rel.source,
+      target: rel.target,
+      type: 'relationship',
+      data: rel,
+    }))
   );
 
-  useEffect(() => {
-    const initialNodes = createNodes(tables);
-    const initialEdges = createEdges(relationships);
-
-    let layoutedNodes = initialNodes;
-    switch (selectedLayout) {
-      case 'force':
-        layoutedNodes = getForceLayout(initialNodes, initialEdges);
-        break;
-      case 'circular':
-        layoutedNodes = getCircularLayout(initialNodes);
-        break;
-      case 'horizontal':
-      case 'vertical':
-        layoutedNodes = getTreeLayout(initialNodes, initialEdges, selectedLayout);
-        break;
-      case 'auto':
-      default:
-        layoutedNodes = getAutoLayout(initialNodes);
-    }
-
-    setNodes(layoutedNodes);
-    setEdges(initialEdges);
-  }, [tables, relationships, selectedLayout, createNodes, createEdges, setNodes, setEdges]);
+  const [selectedLayout, setSelectedLayout] = useState<LayoutType>('TB');
 
   const onLayoutChange = useCallback(
     (layout: LayoutType) => {
+      const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+        nodes,
+        edges,
+        layout
+      );
+      setNodes(layoutedNodes);
+      setEdges(layoutedEdges);
       setSelectedLayout(layout);
     },
-    []
+    [nodes, edges, setNodes, setEdges]
   );
 
   return {

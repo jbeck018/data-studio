@@ -1,77 +1,71 @@
-import { redirect } from '@remix-run/node';
-import { db } from '../db/db.server';
-import { organizationMembers } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { db } from "~/lib/db/db.server";
+import { users, organizations, organizationMemberships } from "~/lib/db/schema/auth";
+import { eq, and } from "drizzle-orm";
+import type { UserWithOrganization } from "~/types";
+import type { Role } from "~/lib/db/schema/auth";
 
-export type Role = 'owner' | 'admin' | 'member';
+const ROLE_LEVELS = {
+  OWNER: 3,
+  ADMIN: 2,
+  MEMBER: 1,
+  VIEWER: 0,
+} as const;
 
-export enum Permission {
-  MANAGE_ORGANIZATION = 'MANAGE_ORGANIZATION',
-  MANAGE_MEMBERS = 'MANAGE_MEMBERS',
-  MANAGE_CONNECTIONS = 'MANAGE_CONNECTIONS',
-  VIEW_CONNECTIONS = 'VIEW_CONNECTIONS',
-  EXECUTE_QUERIES = 'EXECUTE_QUERIES',
+type Role = keyof typeof ROLE_LEVELS;
+
+export function hasPermission(user: UserWithOrganization, requiredRole: Role): boolean {
+  const membership = user.organizationMemberships[0];
+  if (!membership) return false;
+
+  const userRoleLevel = ROLE_LEVELS[membership.role as keyof typeof ROLE_LEVELS];
+  const requiredRoleLevel = ROLE_LEVELS[requiredRole as keyof typeof ROLE_LEVELS];
+
+  return userRoleLevel >= requiredRoleLevel;
 }
 
-const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  owner: [
-    Permission.MANAGE_ORGANIZATION,
-    Permission.MANAGE_MEMBERS,
-    Permission.MANAGE_CONNECTIONS,
-    Permission.VIEW_CONNECTIONS,
-    Permission.EXECUTE_QUERIES,
-  ],
-  admin: [
-    Permission.MANAGE_MEMBERS,
-    Permission.MANAGE_CONNECTIONS,
-    Permission.VIEW_CONNECTIONS,
-    Permission.EXECUTE_QUERIES,
-  ],
-  member: [
-    Permission.VIEW_CONNECTIONS,
-    Permission.EXECUTE_QUERIES,
-  ],
-};
-
-export async function getUserOrganizationRole(userId: string, organizationId: string): Promise<Role | null> {
-  const member = await db.query.organizationMembers.findFirst({
-    where: and(
-      eq(organizationMembers.userId, userId),
-      eq(organizationMembers.organizationId, organizationId)
-    ),
+export async function getUsersInOrganization(organizationId: string): Promise<UserWithOrganization[]> {
+  const usersWithOrg = await db.query.users.findMany({
+    where: eq(users.organizationId, organizationId),
+    with: {
+      organization: true,
+      organizationMemberships: true,
+    },
   });
 
-  return member?.role ?? null;
+  return usersWithOrg as UserWithOrganization[];
 }
 
-export async function getUserOrganizationPermissions(userId: string, organizationId: string): Promise<Permission[]> {
-  const role = await getUserOrganizationRole(userId, organizationId);
-  if (!role) return [];
-  return ROLE_PERMISSIONS[role];
-}
-
-export async function requirePermission(userId: string, organizationId: string, permission: Permission) {
-  const permissions = await getUserOrganizationPermissions(userId, organizationId);
-  if (!permissions.includes(permission)) {
-    throw redirect('/unauthorized');
-  }
-}
-
-export async function createOrganizationMember(userId: string, organizationId: string, role: Role) {
-  await db.insert(organizationMembers).values({
-    userId,
-    organizationId,
-    role,
-  });
-}
-
-export async function updateOrganizationMemberRole(userId: string, organizationId: string, role: Role) {
-  await db.update(organizationMembers)
+export async function updateUserRole(userId: string, organizationId: string, role: Role) {
+  await db
+    .update(organizationMemberships)
     .set({ role })
     .where(
       and(
-        eq(organizationMembers.userId, userId),
-        eq(organizationMembers.organizationId, organizationId)
+        eq(organizationMemberships.userId, userId),
+        eq(organizationMemberships.organizationId, organizationId)
+      )
+    );
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    with: {
+      organization: true,
+      organizationMemberships: true,
+    },
+  });
+
+  if (!user) throw new Error("User not found");
+
+  return user as UserWithOrganization;
+}
+
+export async function removeUserFromOrganization(userId: string, organizationId: string) {
+  await db
+    .delete(organizationMemberships)
+    .where(
+      and(
+        eq(organizationMemberships.userId, userId),
+        eq(organizationMemberships.organizationId, organizationId)
       )
     );
 }

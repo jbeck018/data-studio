@@ -1,73 +1,73 @@
-import { useCallback } from 'react';
 import {
+  ReactFlow,
   Background,
   Controls,
   MiniMap,
   NodeTypes,
   EdgeTypes,
-  ReactFlow,
+  NodeChange,
+  EdgeChange,
+  Node,
+  Edge,
 } from '@xyflow/react';
-import { ProcessedSchemaTable, RelationshipEdgeDataFields } from '../../types/schema';
+import TableNode from './TableNode';
+import RelationshipEdge from './RelationshipEdge';
 import { useSchemaLayout } from '../../hooks/useSchemaLayout';
-import { TableNode } from './TableNode';
-import { RelationshipEdge } from './RelationshipEdge';
-import SchemaControls from './SchemaControls';
+import { ProcessedSchemaTable, RelationshipEdgeData, TableNodeData, LayoutType } from '../../types/schema';
 
 const nodeTypes: NodeTypes = {
-  table: TableNode,
-};
+  table: TableNode as unknown as any,
+} as const;
 
 const edgeTypes: EdgeTypes = {
-  relationship: RelationshipEdge,
-};
+  relationship: RelationshipEdge as any,
+} as const;
 
 interface SchemaVisualizationProps {
-  tables: ProcessedSchemaTable[];
-  relationships: RelationshipEdgeDataFields[];
-  onSearch?: (term: string) => void;
+  schema: {
+    tables: ProcessedSchemaTable[];
+    relationships: RelationshipEdgeData[];
+  };
+  onLayoutChange?: (layout: LayoutType) => void;
 }
 
-export default function SchemaVisualization({
-  tables,
-  relationships,
-  onSearch,
-}: SchemaVisualizationProps) {
+export function SchemaVisualization({ schema, onLayoutChange }: SchemaVisualizationProps) {
   const {
     nodes,
     edges,
     onNodesChange,
     onEdgesChange,
     selectedLayout,
-    onLayoutChange,
-  } = useSchemaLayout({
-    tables,
-    relationships,
-  });
+    onLayoutChange: handleLayoutChange,
+  } = useSchemaLayout(schema);
 
-  const onInit = useCallback(() => {
-    // Any initialization logic can go here
-  }, []);
+  const handleNodesChange = (changes: NodeChange[]) => {
+    onNodesChange(changes as NodeChange<Node<TableNodeData>>[]);
+  };
+
+  const handleEdgesChange = (changes: EdgeChange[]) => {
+    onEdgesChange(changes as EdgeChange<Edge<RelationshipEdgeData>>[]);
+  };
+
+  const handleLayoutTypeChange = (layout: LayoutType) => {
+    handleLayoutChange(layout);
+    onLayoutChange?.(layout);
+  };
 
   return (
-    <div className="h-full w-full">
+    <div className="w-full h-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        onInit={onInit}
         fitView
       >
         <Background />
         <Controls />
         <MiniMap />
-        <SchemaControls
-          selectedLayout={selectedLayout}
-          onLayoutChange={onLayoutChange}
-          onSearch={onSearch}
-        />
       </ReactFlow>
     </div>
   );

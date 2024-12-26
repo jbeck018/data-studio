@@ -10,4 +10,15 @@ export interface QueryResult {
   executionTime: number;
 }
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  hashedPassword: string;
+  createdAt: Date;
+  updatedAt: Date;
+  lastLogin?: Date;
+  organizationId: string;
+}
+
 export * from './schema';

@@ -7,9 +7,10 @@ import { Badge } from "./ui/badge";
 interface ConnectionSelectorProps {
   connections: DatabaseConnection[];
   activeConnectionId?: string | null;
+  onConnectionChange: (connectionId: string) => void;
 }
 
-export function ConnectionSelector({ connections, activeConnectionId }: ConnectionSelectorProps) {
+export function ConnectionSelector({ connections, activeConnectionId, onConnectionChange }: ConnectionSelectorProps) {
   const submit = useSubmit();
   const [connectionStatuses, setConnectionStatuses] = useState<Record<string, string>>({});
 
@@ -39,6 +40,7 @@ export function ConnectionSelector({ connections, activeConnectionId }: Connecti
     const formData = new FormData();
     formData.append("connectionId", value);
     submit(formData, { method: "post", action: "/connections/change" });
+    onConnectionChange(value);
   };
 
   return (

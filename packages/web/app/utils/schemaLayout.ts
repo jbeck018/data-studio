@@ -1,135 +1,136 @@
-import { Node, Edge } from '@xyflow/react';
-import { TableNodeData, RelationshipEdgeData } from '../types/schema';
+import { Edge } from '@xyflow/react';
+import { TableNodeDataFields, RelationshipEdgeDataFields } from '../types/schema';
+import dagre from 'dagre';
+import * as d3 from "d3";
+import { SimulationNodeDatum } from "d3-force";
 
-const PADDING = 50;
-const NODE_WIDTH = 200;
-const NODE_HEIGHT = 100;
+interface TableNodeData extends SimulationNodeDatum {
+  id: string;
+  name: string;
+  type: string;
+  x?: number;
+  y?: number;
+  fx?: number | null;
+  fy?: number | null;
+}
 
-export function getAutoLayout(nodes: Node<TableNodeData>[]): Node<TableNodeData>[] {
-  const GRID_SIZE = Math.ceil(Math.sqrt(nodes.length));
-  return nodes.map((node, index) => ({
-    ...node,
-    position: {
-      x: (index % GRID_SIZE) * (NODE_WIDTH + PADDING),
-      y: Math.floor(index / GRID_SIZE) * (NODE_HEIGHT + PADDING),
-    },
-  }));
+export interface Node<T = any> extends SimulationNodeDatum {
+  id: string;
+  name: string;
+  data: T;
+  position?: {
+    x: number;
+    y: number;
+  };
+  x?: number;
+  y?: number;
+  fx?: number | null;
+  fy?: number | null;
+}
+
+export interface Link extends d3.SimulationLinkDatum<Node> {
+  source: string;
+  target: string;
+  value: number;
+}
+
+const NODE_WIDTH = 172;
+const NODE_HEIGHT = 36;
+
+export function getAutoLayout(nodes: Node<TableNodeDataFields>[]): Node<TableNodeDataFields>[] {
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+  
+  return nodes.map((node, index) => {
+    const angle = (index * 2 * Math.PI) / nodes.length;
+    const radius = Math.min(window.innerWidth, window.innerHeight) * 0.3;
+    
+    return {
+      ...node,
+      position: {
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+      },
+    };
+  });
 }
 
 export function getForceLayout(
-  nodes: Node<TableNodeData>[],
-  edges: Edge<RelationshipEdgeData>[]
-): Node<TableNodeData>[] {
-  // Simple force-directed layout
-  const iterations = 100;
-  const k = 100; // Spring constant
-  const positions = nodes.map((node) => ({ ...node.position }));
+  nodes: Node<TableNodeDataFields>[],
+  edges: Edge<RelationshipEdgeDataFields>[]
+): Node<TableNodeDataFields>[] {
+  const simulation = d3
+    .forceSimulation<Node<TableNodeDataFields>>(nodes)
+    .force('charge', d3.forceManyBody<Node<TableNodeDataFields>>().strength(-1000))
+    .force('center', d3.forceCenter<Node<TableNodeDataFields>>(window.innerWidth / 2, window.innerHeight / 2))
+    .force(
+      'link',
+      d3
+        .forceLink<Node<TableNodeDataFields>, d3.SimulationLinkDatum<Node<TableNodeDataFields>>>(edges)
+        .id(d => d.id)
+        .distance(200)
+    )
+    .stop();
 
-  for (let i = 0; i < iterations; i++) {
-    // Calculate repulsive forces
-    for (let j = 0; j < nodes.length; j++) {
-      for (let l = 0; l < nodes.length; l++) {
-        if (j === l) continue;
+  // Run the simulation synchronously
+  simulation.tick(300);
 
-        const dx = positions[l].x - positions[j].x;
-        const dy = positions[l].y - positions[j].y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance === 0) continue;
-
-        const force = k / (distance * distance);
-        positions[j].x -= (dx / distance) * force;
-        positions[j].y -= (dy / distance) * force;
-        positions[l].x += (dx / distance) * force;
-        positions[l].y += (dy / distance) * force;
-      }
-    }
-
-    // Calculate attractive forces (edges)
-    for (const edge of edges) {
-      const sourceIndex = nodes.findIndex((n) => n.id === edge.source);
-      const targetIndex = nodes.findIndex((n) => n.id === edge.target);
-
-      if (sourceIndex === -1 || targetIndex === -1) continue;
-
-      const dx = positions[targetIndex].x - positions[sourceIndex].x;
-      const dy = positions[targetIndex].y - positions[sourceIndex].y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance === 0) continue;
-
-      const force = (distance * distance) / k;
-      positions[sourceIndex].x += (dx / distance) * force;
-      positions[sourceIndex].y += (dy / distance) * force;
-      positions[targetIndex].x -= (dx / distance) * force;
-      positions[targetIndex].y -= (dy / distance) * force;
-    }
-  }
-
-  return nodes.map((node, index) => ({
-    ...node,
-    position: positions[index],
-  }));
-}
-
-export function getCircularLayout(nodes: Node<TableNodeData>[]): Node<TableNodeData>[] {
-  const radius = (nodes.length * (NODE_WIDTH + PADDING)) / (2 * Math.PI);
-  return nodes.map((node, index) => ({
+  return nodes.map((node) => ({
     ...node,
     position: {
-      x: radius * Math.cos((2 * Math.PI * index) / nodes.length),
-      y: radius * Math.sin((2 * Math.PI * index) / nodes.length),
+      x: node.x ?? 0,
+      y: node.y ?? 0,
     },
   }));
 }
 
-export function getTreeLayout(
-  nodes: Node<TableNodeData>[],
-  edges: Edge<RelationshipEdgeData>[],
-  direction: 'horizontal' | 'vertical'
-): Node<TableNodeData>[] {
-  const levels: { [key: string]: number } = {};
-  const visited = new Set<string>();
+export function getCircularLayout(nodes: Node<TableNodeDataFields>[]): Node<TableNodeDataFields>[] {
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+  const radius = Math.min(window.innerWidth, window.innerHeight) * 0.3;
 
-  // Find root nodes (nodes with no incoming edges)
-  const hasIncomingEdge = new Set(edges.map((e) => e.target));
-  const rootNodes = nodes.filter((node) => !hasIncomingEdge.has(node.id));
-
-  // Perform BFS to assign levels
-  const queue = rootNodes.map((node) => ({ node, level: 0 }));
-  while (queue.length > 0) {
-    const { node, level } = queue.shift()!;
-    if (visited.has(node.id)) continue;
-
-    visited.add(node.id);
-    levels[node.id] = level;
-
-    const outgoingEdges = edges.filter((e) => e.source === node.id);
-    for (const edge of outgoingEdges) {
-      const targetNode = nodes.find((n) => n.id === edge.target);
-      if (targetNode && !visited.has(targetNode.id)) {
-        queue.push({ node: targetNode, level: level + 1 });
-      }
-    }
-  }
-
-  // Position nodes based on their levels
-  const nodesPerLevel: { [key: number]: number[] } = {};
-  Object.entries(levels).forEach(([nodeId, level]) => {
-    if (!nodesPerLevel[level]) nodesPerLevel[level] = [];
-    nodesPerLevel[level].push(Number(nodeId));
-  });
-
-  return nodes.map((node) => {
-    const level = levels[node.id] || 0;
-    const nodesAtLevel = nodesPerLevel[level] || [];
-    const index = nodesAtLevel.indexOf(Number(node.id));
-    const x = direction === 'horizontal' ? level * (NODE_WIDTH + PADDING) : index * (NODE_WIDTH + PADDING);
-    const y = direction === 'horizontal' ? index * (NODE_HEIGHT + PADDING) : level * (NODE_HEIGHT + PADDING);
-
+  return nodes.map((node, index) => {
+    const angle = (index * 2 * Math.PI) / nodes.length;
     return {
       ...node,
-      position: { x, y },
+      position: {
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+      },
+    };
+  });
+}
+
+export function getTreeLayout(
+  nodes: Node<TableNodeDataFields>[],
+  edges: Edge<RelationshipEdgeDataFields>[]
+): Node<TableNodeDataFields>[] {
+  const g = new dagre.graphlib.Graph();
+
+  g.setGraph({ rankdir: 'TB', nodesep: 70, ranksep: 50 });
+  g.setDefaultEdgeLabel(() => ({}));
+
+  // Add nodes to the graph
+  nodes.forEach((node) => {
+    g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+  });
+
+  // Add edges to the graph
+  edges.forEach((edge) => {
+    g.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(g);
+
+  // Get the positioned nodes from the graph
+  return nodes.map((node) => {
+    const nodeWithPosition = g.node(node.id);
+    return {
+      ...node,
+      position: {
+        x: nodeWithPosition.x - NODE_WIDTH / 2,
+        y: nodeWithPosition.y - NODE_HEIGHT / 2,
+      },
     };
   });
 }

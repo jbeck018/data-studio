@@ -3,11 +3,13 @@ import { useLoaderData } from '@remix-run/react';
 import { fetchDatabaseSchema } from '../utils/database.server';
 import { SchemaVisualization } from '../components/SchemaVisualization';
 import { PageContainer } from '../components/PageContainer';
-import type { TableSchema } from '../types/schema';
+import type { TableSchema, ProcessedSchemaTable, RelationshipEdgeData } from '../types/schema';
 
-export async function loader() {
+export async function loader({ request }: { request: Request }) {
   try {
-    const schema = await fetchDatabaseSchema('your-connection-id');
+    const connectionId = 'your-connection-id'; // You'll need to get this from your auth context
+    const organizationId = 'your-org-id'; // You'll need to get this from your auth context
+    const schema = await fetchDatabaseSchema(connectionId, organizationId);
     return json({ schema });
   } catch (error) {
     console.error('Failed to fetch schema:', error);
@@ -20,49 +22,68 @@ interface LoaderData {
   error?: string;
 }
 
+function transformSchemaData(schema: TableSchema[]): {
+  tables: ProcessedSchemaTable[];
+  relationships: RelationshipEdgeData[];
+} {
+  const tables: ProcessedSchemaTable[] = schema.map((table, index) => ({
+    id: `table-${index}`,
+    type: 'table',
+    position: { x: 0, y: index * 200 },
+    data: {
+      id: `table-${index}`,
+      name: table.name,
+      columns: table.columns.map(col => ({
+        name: col.name,
+        type: col.type,
+        nullable: col.nullable,
+        isPrimaryKey: col.isPrimaryKey,
+        isForeignKey: col.isForeignKey,
+        references: col.references,
+      })),
+      type: 'table',
+      selected: false,
+      draggable: true,
+      selectable: true,
+      deletable: false,
+    },
+  }));
+
+  const relationships: RelationshipEdgeData[] = schema.flatMap((table, tableIndex) =>
+    table.columns
+      .filter(col => col.isForeignKey && col.references)
+      .map((col, colIndex) => {
+        const targetTableIndex = schema.findIndex(t => t.name === col.references!.table);
+        return {
+          id: `edge-${tableIndex}-${colIndex}`,
+          source: `table-${tableIndex}`,
+          target: `table-${targetTableIndex}`,
+          label: `${table.name}.${col.name} → ${col.references!.table}.${col.references!.column}`,
+          sourceTable: table.name,
+          sourceColumn: col.name,
+          targetTable: col.references!.table,
+          targetColumn: col.references!.column,
+          selected: false,
+          animated: false,
+        };
+      })
+  );
+
+  return { tables, relationships };
+}
+
 export default function Schema() {
   const { schema, error } = useLoaderData<LoaderData>();
 
   if (error) {
-    return (
-      <PageContainer>
-        <div className="text-red-500">{error}</div>
-      </PageContainer>
-    );
+    return <div>Error: {error}</div>;
   }
 
-  // Transform the schema data into the format expected by SchemaVisualization
-  const processedSchema = {
-    tables: schema.map(table => ({
-      name: table.table_name,
-      columns: table.columns.map(col => ({
-        name: col.column_name,
-        type: col.data_type,
-        nullable: col.is_nullable === 'YES',
-        isPrimaryKey: table.primary_key?.includes(col.column_name) || false,
-        isForeignKey: table.foreign_keys?.some(fk => fk.column_name === col.column_name) || false,
-        references: table.foreign_keys?.find(fk => fk.column_name === col.column_name)
-          ? {
-              table: table.foreign_keys.find(fk => fk.column_name === col.column_name)!.foreign_table_name,
-              column: table.foreign_keys.find(fk => fk.column_name === col.column_name)!.foreign_column_name,
-            }
-          : undefined,
-      })),
-    })),
-    relationships: schema.flatMap(table =>
-      (table.foreign_keys || []).map(fk => ({
-        sourceTable: table.table_name,
-        sourceColumn: fk.column_name,
-        targetTable: fk.foreign_table_name,
-        targetColumn: fk.foreign_column_name,
-        type: 'one-to-many' as const,
-      }))
-    ),
-  };
+  const schemaData = transformSchemaData(schema);
 
   return (
     <PageContainer>
-      <SchemaVisualization schema={processedSchema} />
+      <SchemaVisualization schema={schemaData} />
     </PageContainer>
   );
 }

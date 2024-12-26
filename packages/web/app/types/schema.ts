@@ -1,41 +1,21 @@
-import { Node, Edge } from '@xyflow/react';
+import { Node, Edge, NodeProps, EdgeProps } from '@xyflow/react';
+import { CSSProperties } from 'react';
 
-export interface TableColumn {
-  column_name: string;
-  data_type: string;
-  is_nullable: string;
-  column_default: string | null;
-  constraint_type?: 'PRIMARY KEY' | 'FOREIGN KEY';
-  foreign_table_name?: string;
-  foreign_column_name?: string;
-}
+export type ColumnType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'timestamp'
+  | 'json'
+  | 'array'
+  | 'object'
+  | 'unknown';
 
-export interface SchemaTable {
-  table_name: string;
-  columns: TableColumn[];
-}
-
-export interface TableSchema {
-  table_name: string;
-  connectionId: string;
-  columns: Array<{
-    column_name: string;
-    data_type: string;
-    is_nullable: string;
-    column_default: string | null;
-  }>;
-  primary_key: string[] | null;
-  foreign_keys: Array<{
-    column_name: string;
-    foreign_table_name: string;
-    foreign_column_name: string;
-  }> | null;
-}
-
-export interface SchemaColumn {
+export interface Column {
   name: string;
   type: string;
-  isNullable: boolean;
+  nullable: boolean;
   isPrimaryKey: boolean;
   isForeignKey: boolean;
   references?: {
@@ -44,34 +24,62 @@ export interface SchemaColumn {
   };
 }
 
-export interface TableNodeDataFields {
+export interface TableSchema {
   id: string;
   name: string;
   comment?: string;
-  columns: SchemaColumn[];
-  label?: string;
-  position?: { x: number; y: number };
+  columns: Column[];
+  rowCount: number;
+  sizeInBytes: number;
 }
 
-export interface RelationshipEdgeDataFields {
+export interface TableNodeData {
+  [key: string]: unknown;
   id: string;
+  name: string;
+  columns: Column[];
+  comment?: string;
+  position?: { x: number; y: number };
+  type: 'table';
+  selected: boolean;
+  draggable: boolean;
+  selectable: boolean;
+  deletable: boolean;
+}
+
+export interface RelationshipEdgeData {
+  [key: string]: unknown;
+  id: string;
+  source: string;
+  target: string;
   sourceTable: string;
   sourceColumn: string;
   targetTable: string;
   targetColumn: string;
   label?: string;
+  selected: boolean;
+  animated: boolean;
+  style?: CSSProperties;
 }
 
-export type TableNodeData = Node<TableNodeDataFields>;
-export type RelationshipEdgeData = Edge<RelationshipEdgeDataFields>;
+export interface ProcessedSchemaTable extends Node<TableNodeData> {
+  id: string;
+  type: 'table';
+  position: { x: number; y: number };
+  data: TableNodeData;
+}
 
-export type ProcessedSchemaTable = TableNodeData;
+export type TableNodeDataFields = TableNodeData;
+export type RelationshipEdgeDataFields = RelationshipEdgeData;
 
-export type LayoutType = 'auto' | 'force' | 'circular' | 'horizontal' | 'vertical';
+export type TableNode = Node<TableNodeData>;
+export type RelationshipEdge = Edge<RelationshipEdgeData>;
+
+export type LayoutType = 'auto' | 'force' | 'circular' | 'horizontal' | 'vertical' | 'LR' | 'TB' | 'Radial';
 
 export interface SchemaLayout {
-  nodes: TableNodeData[];
-  edges: RelationshipEdgeData[];
+  nodes: TableNode[];
+  edges: RelationshipEdge[];
   type: LayoutType;
 }
 
@@ -79,4 +87,27 @@ export interface SchemaVisualizationProps {
   tables: ProcessedSchemaTable[];
   relationships: RelationshipEdgeDataFields[];
   onSearch?: (term: string) => void;
+}
+
+export interface SchemaData {
+  tables: Array<{
+    name: string;
+    columns: Array<{
+      name: string;
+      type: string;
+      nullable?: boolean;
+      isPrimaryKey?: boolean;
+      isForeignKey?: boolean;
+      references?: {
+        table: string;
+        column: string;
+      };
+    }>;
+  }>;
+  relationships: Array<{
+    sourceTable: string;
+    sourceColumn: string;
+    targetTable: string;
+    targetColumn: string;
+  }>;
 }

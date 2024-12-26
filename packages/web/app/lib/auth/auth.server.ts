@@ -1,199 +1,169 @@
-import bcrypt from 'bcrypt';
-import { db } from '../db/db.server';
-import { users } from '../db/schema';
-import { eq } from 'drizzle-orm';
-import { createUserSession } from './session.server';
+import { db } from "~/lib/db/db.server";
+import { users, organizations, organizationMemberships, type Role } from "~/lib/db/schema/auth";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import type { UserWithOrganization } from "~/types";
+import { createCookieSessionStorage, redirect } from "@remix-run/node";
+import { v4 as uuidv4 } from "uuid";
 
-const SALT_ROUNDS = 10;
+export async function createUser(email: string, password: string, name: string) {
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-interface LoginForm {
-  email: string;
-  password: string;
-  redirectTo: string;
-}
+  // Create organization first
+  const [organization] = await db.insert(organizations)
+    .values({
+      id: uuidv4(),
+      name: `${name}'s Organization`,
+    })
+    .returning();
 
-interface RegisterForm extends LoginForm {
-  name: string;
-}
+  // Create user
+  const [user] = await db.insert(users)
+    .values({
+      id: uuidv4(),
+      email,
+      name,
+      hashedPassword,
+      organizationId: organization.id,
+    })
+    .returning();
 
-interface UpdateUserInput {
-  email?: string;
-  name?: string;
-  password?: string;
-  currentPassword?: string;
-}
-
-export async function register(request: Request, formData: FormData) {
-  const email = formData.get('email')?.toString();
-  const password = formData.get('password')?.toString();
-  const name = formData.get('name')?.toString();
-  const redirectTo = formData.get('redirectTo')?.toString() || '/dashboard';
-
-  if (!email || !password || !name) {
-    return {
-      errors: {
-        email: !email ? 'Email is required' : null,
-        password: !password ? 'Password is required' : null,
-        name: !name ? 'Name is required' : null,
-      },
-    };
-  }
-
-  const existingUser = await db.query.users.findFirst({
-    where: eq(users.email, email),
-  });
-
-  if (existingUser) {
-    return {
-      errors: {
-        email: 'A user already exists with this email',
-      },
-    };
-  }
-
-  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
-  const [user] = await db.insert(users).values({
-    email,
-    name,
-    hashedPassword,
-  }).returning();
-
-  return createUserSession({
-    request,
-    userId: user.id,
-    remember: false,
-    redirectTo,
-  });
-}
-
-export async function login(request: Request, formData: FormData) {
-  console.log('Starting login process');
-  const email = formData.get('email')?.toString();
-  const password = formData.get('password')?.toString();
-  const redirectTo = formData.get('redirectTo')?.toString() || '/dashboard';
-  const remember = formData.get('remember') === 'on';
-
-  console.log('Login parameters:', { email, redirectTo, remember });
-
-  if (!email || !password) {
-    console.log('Missing required fields');
-    return {
-      errors: {
-        email: !email ? 'Email is required' : null,
-        password: !password ? 'Password is required' : null,
-      },
-    };
-  }
-
-  const user = await db.query.users.findFirst({
-    where: eq(users.email, email),
-  });
-
-  if (!user) {
-    console.log('User not found');
-    return {
-      errors: {
-        email: 'Invalid email or password',
-      },
-    };
-  }
-
-  const isValidPassword = await bcrypt.compare(password, user.hashedPassword);
-
-  if (!isValidPassword) {
-    console.log('Invalid password');
-    return {
-      errors: {
-        email: 'Invalid email or password',
-      },
-    };
-  }
-
-  console.log('Login successful, creating session');
-  const sessionResponse = await createUserSession({
-    request,
-    userId: user.id,
-    remember,
-    redirectTo,
-  });
-  console.log('Session created, returning response');
-  return sessionResponse;
-}
-
-export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-  });
-
-  if (!user) {
-    return {
-      error: 'User not found',
-    };
-  }
-
-  const isValidPassword = await bcrypt.compare(currentPassword, user.hashedPassword);
-  if (!isValidPassword) {
-    return {
-      error: 'Invalid current password',
-    };
-  }
-
-  const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-
-  await db.update(users)
-    .set({ hashedPassword })
-    .where(eq(users.id, userId));
-
-  return { success: true };
-}
-
-export async function updateUser(userId: string, input: UpdateUserInput) {
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-  });
-
-  if (!user) {
-    throw new Error("User not found");
-  }
-
-  const updates: Partial<typeof user> = {
-    updatedAt: new Date(),
-  };
-
-  if (input.email) {
-    // Check if email is already taken by another user
-    const existingUser = await db.query.users.findFirst({
-      where: eq(users.email, input.email),
+  // Create organization membership
+  await db.insert(organizationMemberships)
+    .values({
+      id: uuidv4(),
+      userId: user.id,
+      organizationId: organization.id,
+      role: "OWNER",
     });
 
-    if (existingUser && existingUser.id !== userId) {
-      throw new Error("Email is already taken");
-    }
-    updates.email = input.email;
-  }
+  const userWithOrg = await getUserById(user.id);
+  if (!userWithOrg) throw new Error("Failed to create user");
 
-  if (input.name) {
-    updates.name = input.name;
-  }
+  return userWithOrg;
+}
 
-  if (input.password) {
-    if (!input.currentPassword) {
-      throw new Error("Current password is required to change password");
-    }
+export async function verifyLogin(email: string, password: string) {
+  const user = await db.query.users.findFirst({
+    where: eq(users.email, email),
+    with: {
+      organization: true,
+      organizationMemberships: true,
+    },
+  });
 
-    const isValid = await bcrypt.compare(input.currentPassword, user.hashedPassword);
-    if (!isValid) {
-      throw new Error("Current password is incorrect");
-    }
+  if (!user) return null;
 
-    updates.hashedPassword = await bcrypt.hash(input.password, SALT_ROUNDS);
-  }
+  const isValid = await bcrypt.compare(password, user.hashedPassword);
+  if (!isValid) return null;
 
-  const [updatedUser] = await db.update(users)
+  return user;
+}
+
+export async function getUserById(id: string): Promise<UserWithOrganization | null> {
+  return db.query.users.findFirst({
+    where: eq(users.id, id),
+    with: {
+      organization: true,
+      organizationMemberships: true,
+    },
+  });
+}
+
+export async function getUserByEmail(email: string) {
+  return db.query.users.findFirst({
+    where: eq(users.email, email),
+    with: {
+      organization: true,
+      organizationMemberships: true,
+    },
+  });
+}
+
+export async function updateUser(userId: string, updates: Partial<typeof users.$inferSelect>): Promise<UserWithOrganization> {
+  const [updatedUser] = await db
+    .update(users)
     .set(updates)
     .where(eq(users.id, userId))
     .returning();
 
-  return updatedUser;
+  const userWithOrg = await getUserById(updatedUser.id);
+  if (!userWithOrg) throw new Error("Failed to update user");
+
+  return userWithOrg;
+}
+
+export async function requireUser(request: Request): Promise<UserWithOrganization> {
+  const user = await getUserFromSession(request);
+  if (!user) {
+    throw redirect("/login");
+  }
+  return user;
+}
+
+export async function getUserFromSession(request: Request): Promise<UserWithOrganization | null> {
+  const session = await getSession(request);
+  const userId = session.get("userId");
+  if (!userId) return null;
+
+  return getUserById(userId);
+}
+
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+  throw new Error("SESSION_SECRET must be set");
+}
+
+const storage = createCookieSessionStorage({
+  cookie: {
+    name: "data_studio_session",
+    secure: process.env.NODE_ENV === "production",
+    secrets: [sessionSecret],
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+    httpOnly: true,
+  },
+});
+
+export async function createUserSession(userId: string, redirectTo: string) {
+  const session = await storage.getSession();
+  session.set("userId", userId);
+  return redirect(redirectTo, {
+    headers: {
+      "Set-Cookie": await storage.commitSession(session),
+    },
+  });
+}
+
+export async function getSession(request: Request) {
+  return storage.getSession(request.headers.get("Cookie"));
+}
+
+export async function logout(request: Request) {
+  const session = await getSession(request);
+  return redirect("/login", {
+    headers: {
+      "Set-Cookie": await storage.destroySession(session),
+    },
+  });
+}
+
+export async function login(email: string, password: string): Promise<UserWithOrganization | null> {
+  const user = await verifyLogin(email, password);
+  if (!user) return null;
+
+  await db
+    .update(users)
+    .set({ lastLogin: new Date() })
+    .where(eq(users.id, user.id));
+
+  return user;
+}
+
+export async function register(email: string, password: string, name: string): Promise<UserWithOrganization | null> {
+  const existingUser = await getUserByEmail(email);
+  if (existingUser) return null;
+
+  return createUser(email, password, name);
 }

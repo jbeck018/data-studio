@@ -3,23 +3,19 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { useTheme } from '../hooks/useTheme';
 import { EditorView, ViewUpdate } from '@codemirror/view';
 import { Extension, Compartment, StateEffect } from '@codemirror/state';
-import { useCallback, useEffect, useRef, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useMemo, useState } from 'react';
 import { basicSetup } from 'codemirror';
 import { linter, lintGutter, Diagnostic } from '@codemirror/lint';
 import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
 import type { TableSchema } from '../types';
 
 interface SQLEditorProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  className?: string;
-  height?: string;
-  onError?: (error: string | null) => void;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
+  onExecute?: (query: string) => void;
   schema?: TableSchema[];
   selectedTables?: Set<string>;
   databaseAliases?: { alias: string; connectionId: string }[];
-  onExecute?: () => void;
   isExecuting?: boolean;
 }
 
@@ -182,23 +178,20 @@ const lightTheme = EditorView.theme({
 });
 
 export function SQLEditor({
-  value,
+  defaultValue = "",
   onChange,
-  placeholder = 'Enter your SQL query here...',
-  className = '',
-  height = '200px',
-  onError,
+  onExecute,
   schema,
   selectedTables,
   databaseAliases,
-  onExecute,
-  isExecuting,
+  isExecuting = false,
 }: SQLEditorProps) {
   const { isDark } = useTheme();
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView>();
   const sqlLinter = useMemo(() => createSQLLinter(), []);
   const isInternalChange = useRef(false);
+  const [value, setValue] = useState(defaultValue);
   
   // Create compartments for dynamic configuration
   const themeCompartment = useMemo(() => new Compartment(), []);
@@ -215,7 +208,8 @@ export function SQLEditor({
         if (update.docChanged) {
           isInternalChange.current = true;
           const newValue = update.state.doc.toString();
-          onChange(newValue);
+          setValue(newValue);
+          onChange?.(newValue);
           // Reset the flag after the current call stack
           setTimeout(() => {
             isInternalChange.current = false;
@@ -224,7 +218,7 @@ export function SQLEditor({
       }),
       EditorView.theme({
         '&': {
-          height,
+          height: '200px',
         },
       }),
       themeCompartment.of(isDark ? oneDark : lightTheme),
@@ -258,7 +252,7 @@ export function SQLEditor({
     return () => {
       view.destroy();
     };
-  }, [onChange, height, isDark, schema, sqlLinter, databaseAliases, selectedTables]);
+  }, [onChange, isDark, schema, sqlLinter, databaseAliases, selectedTables, value]);
 
   // Handle theme changes
   useEffect(() => {
@@ -293,27 +287,32 @@ export function SQLEditor({
     }
   }, [createEditor]);
 
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {onExecute && (
-            <button
-              onClick={onExecute}
-              disabled={isExecuting || !value.trim()}
-              className="flex items-center gap-2"
-            >
-              Execute Query
-            </button>
-          )}
-        </div>
-      </div>
+  const handleExecute = useCallback(() => {
+    onExecute?.(value);
+  }, [onExecute, value]);
 
-      <div 
-        ref={editorRef} 
-        className={`overflow-hidden rounded-lg border border-light-border dark:border-dark-border ${className}`}
-        style={{ height }}
-      />
+  return (
+    <div className="flex h-full space-x-4">
+      <div className="flex-1">
+        <div className="mb-2 flex items-center justify-between">
+          <div className="text-sm text-gray-500">
+            Press {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"} + Enter to
+            execute
+          </div>
+          <button
+            onClick={handleExecute}
+            disabled={isExecuting || !value.trim()}
+            className="flex items-center gap-2"
+          >
+            {isExecuting ? "Executing..." : "Execute"}
+          </button>
+        </div>
+        <div 
+          ref={editorRef} 
+          className={`overflow-hidden rounded-lg border border-light-border dark:border-dark-border`}
+          style={{ height: '200px' }}
+        />
+      </div>
     </div>
   );
 }

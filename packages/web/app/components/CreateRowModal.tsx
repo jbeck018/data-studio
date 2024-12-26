@@ -1,80 +1,164 @@
-import { useState } from "react";
-import type { TableSchema } from "../types";
-import { Button } from "./Button";
+import { Fragment, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { Input } from "~/components/ui/input";
+import { Button } from "~/components/ui/button";
+import { Label } from "~/components/ui/label";
+import { Textarea } from "~/components/ui/textarea";
+import { Switch } from "~/components/ui/switch";
+import type { ColumnSchema } from "~/types";
 
 interface CreateRowModalProps {
-  tableName: string;
-  fields: TableSchema["columns"];
+  isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: Record<string, any>) => Promise<void>;
+  onSubmit: (values: Record<string, any>) => void;
+  columns: ColumnSchema[];
 }
 
-export function CreateRowModal({ tableName, fields, onClose, onSubmit }: CreateRowModalProps) {
-  const [formData, setFormData] = useState<Record<string, any>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export function CreateRowModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  columns,
+}: CreateRowModalProps) {
+  const [values, setValues] = useState<Record<string, any>>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      await onSubmit(formData);
-      onClose();
-    } catch (error) {
-      // Error is handled by parent
-    } finally {
-      setIsSubmitting(false);
-    }
+    onSubmit(values);
+    onClose();
+  };
+
+  const handleInputChange = (columnName: string, value: any) => {
+    setValues((prev) => ({
+      ...prev,
+      [columnName]: value,
+    }));
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} />
-        <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
-          <div>
-            <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
-              Create Row in {tableName}
-            </h3>
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              {fields.map((field) => (
-                <div key={field.name}>
-                  <label htmlFor={field.name} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {field.name}
-                    {!field.nullable && <span className="text-red-500 ml-1">*</span>}
-                  </label>
-                  <input
-                    type={field.type === "number" ? "number" : "text"}
-                    name={field.name}
-                    id={field.name}
-                    required={!field.nullable}
-                    value={formData[field.name] || ""}
-                    onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e.target.value }))}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
-                  />
-                </div>
-              ))}
-              <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="inline-flex w-full justify-center sm:col-start-2"
-                >
-                  {isSubmitting ? "Creating..." : "Create"}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                  className="mt-3 inline-flex w-full justify-center sm:col-start-1 sm:mt-0"
-                  variant="secondary"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create New Row</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {columns.map((column) => (
+            <div key={column.name} className="space-y-2">
+              <Label>
+                {column.name}
+                {!column.isNullable && (
+                  <span className="text-red-500 ml-1">*</span>
+                )}
+              </Label>
+              {renderInput(column, values[column.name], (value) =>
+                handleInputChange(column.name, value)
+              )}
+              {column.isNullable && (
+                <div className="text-xs text-gray-500">Optional</div>
+              )}
+            </div>
+          ))}
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit">Create</Button>
           </div>
-        </div>
-      </div>
-    </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function renderInput(
+  column: ColumnSchema,
+  value: any,
+  onChange: (value: any) => void
+) {
+  const dataType = column.dataType.toLowerCase();
+
+  if (dataType.includes("bool")) {
+    return (
+      <Switch
+        checked={value ?? false}
+        onCheckedChange={onChange}
+      />
+    );
+  }
+
+  if (dataType.includes("text") || dataType.includes("char")) {
+    if (dataType.includes("long") || dataType.includes("var")) {
+      return (
+        <Textarea
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={`Enter ${column.name}`}
+        />
+      );
+    }
+    return (
+      <Input
+        type="text"
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={`Enter ${column.name}`}
+      />
+    );
+  }
+
+  if (
+    dataType.includes("int") ||
+    dataType.includes("decimal") ||
+    dataType.includes("numeric") ||
+    dataType.includes("float") ||
+    dataType.includes("double")
+  ) {
+    return (
+      <Input
+        type="number"
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.valueAsNumber)}
+        placeholder={`Enter ${column.name}`}
+      />
+    );
+  }
+
+  if (dataType.includes("date")) {
+    if (dataType.includes("time")) {
+      return (
+        <Input
+          type="datetime-local"
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      );
+    }
+    return (
+      <Input
+        type="date"
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  }
+
+  if (dataType.includes("time")) {
+    return (
+      <Input
+        type="time"
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  }
+
+  // Default to text input for unknown types
+  return (
+    <Input
+      type="text"
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={`Enter ${column.name}`}
+    />
   );
 }

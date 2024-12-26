@@ -1,104 +1,310 @@
 import { format } from "sql-formatter";
-import { QueryError } from '../types/query';
+import { QueryError, QueryErrorCode } from '~/types/query';
+import { Parser } from 'node-sql-parser';
+
+const VALID_IDENTIFIER_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+const RESERVED_WORDS = new Set([
+  'SELECT', 'FROM', 'WHERE', 'INSERT', 'UPDATE', 'DELETE',
+  'DROP', 'CREATE', 'ALTER', 'TABLE', 'INDEX', 'VIEW',
+  'FUNCTION', 'PROCEDURE', 'TRIGGER', 'DATABASE', 'SCHEMA'
+]);
+
+const SQL_RESERVED_WORDS = new Set([
+  'SELECT', 'FROM', 'WHERE', 'INSERT', 'UPDATE', 'DELETE',
+  'DROP', 'CREATE', 'ALTER', 'TABLE', 'INDEX', 'VIEW',
+  'FUNCTION', 'PROCEDURE', 'TRIGGER', 'DATABASE', 'SCHEMA'
+]);
+
+const DEFAULT_LIMIT = 100;
+const MAX_LIMIT = 1000;
+
+const DANGEROUS_KEYWORDS = [
+  'DROP',
+  'DELETE',
+  'TRUNCATE',
+  'ALTER',
+  'RENAME',
+  'REPLACE',
+  'GRANT',
+  'REVOKE',
+];
 
 /**
- * Sanitizes table and column names to prevent SQL injection.
- * Only allows alphanumeric characters and underscores.
- * Removes any other characters that could be used for SQL injection.
+ * Validates a table name.
+ * @param name The table name to validate.
  */
-export function sanitizeTableName(name: string): string {
-  if (!name) {
-    throw new QueryError('Table or column name cannot be empty', 'INVALID_NAME');
+export function validateTableName(tableName: string): void {
+  if (!tableName || typeof tableName !== 'string') {
+    throw new QueryError(QueryErrorCode.INVALID_TABLE, 'Table name must be a non-empty string');
   }
 
-  // Remove any characters that aren't alphanumeric or underscores
-  const sanitized = name.replace(/[^a-zA-Z0-9_]/g, '');
-
-  // Ensure the name starts with a letter
-  if (!/^[a-zA-Z]/.test(sanitized)) {
-    throw new QueryError('Table or column name must start with a letter', 'INVALID_NAME');
+  const validTableNameRegex = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+  if (!validTableNameRegex.test(tableName)) {
+    throw new QueryError(
+      QueryErrorCode.INVALID_TABLE,
+      'Table name must start with a letter or underscore and contain only letters, numbers, and underscores'
+    );
   }
 
-  // Ensure we still have a valid name after sanitization
-  if (sanitized.length === 0) {
-    throw new QueryError('Invalid table or column name', 'INVALID_NAME');
+  if (SQL_RESERVED_WORDS.has(tableName.toUpperCase())) {
+    throw new QueryError(
+      QueryErrorCode.INVALID_TABLE,
+      `Table name cannot be a reserved word: ${tableName}`
+    );
   }
-
-  // Convert to lowercase for consistency
-  return sanitized.toLowerCase();
 }
 
 /**
- * Validates and formats a schema name.
- * By default, uses 'public' schema if none is provided.
+ * Validates a column name.
+ * @param name The column name to validate.
  */
-export function sanitizeSchemaName(schema: string = 'public'): string {
-  const sanitized = sanitizeTableName(schema);
-  return sanitized;
-}
-
-/**
- * Validates and formats column names for SELECT statements.
- */
-export function sanitizeColumnList(columns: string[]): string {
-  if (!columns || columns.length === 0) {
-    return '*';
+export function validateColumnName(columnName: string): void {
+  if (!columnName || typeof columnName !== 'string') {
+    throw new QueryError(QueryErrorCode.INVALID_COLUMN, 'Column name must be a non-empty string');
   }
 
-  return columns
-    .map(col => {
-      // Handle special case for *
-      if (col === '*') return col;
-      return sanitizeTableName(col);
-    })
-    .join(', ');
+  const validColumnNameRegex = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+  if (!validColumnNameRegex.test(columnName)) {
+    throw new QueryError(
+      QueryErrorCode.INVALID_COLUMN,
+      'Column name must start with a letter or underscore and contain only letters, numbers, and underscores'
+    );
+  }
+
+  if (SQL_RESERVED_WORDS.has(columnName.toUpperCase())) {
+    throw new QueryError(
+      QueryErrorCode.INVALID_COLUMN,
+      `Column name cannot be a reserved word: ${columnName}`
+    );
+  }
 }
 
 /**
- * Creates a safe parameterized WHERE clause.
- * Returns both the clause string and the values array for parameterized queries.
+ * Sanitizes an identifier by wrapping it in double quotes and escaping any double quotes.
+ * @param identifier The identifier to sanitize.
  */
-export function createWhereClause(
-  conditions: Record<string, any>
-): { clause: string; values: any[] } {
-  const values: any[] = [];
+export function sanitizeIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+/**
+ * Creates a WHERE clause from the given conditions.
+ * @param conditions The conditions to include in the WHERE clause.
+ */
+export function createWhereClause(conditions: Record<string, any>): string {
   const clauses: string[] = [];
-
-  Object.entries(conditions).forEach(([key, value], index) => {
-    const sanitizedKey = sanitizeTableName(key);
-    clauses.push(`${sanitizedKey} = $${index + 1}`);
-    values.push(value);
-  });
-
-  return {
-    clause: clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '',
-    values,
-  };
+  for (const [column, value] of Object.entries(conditions)) {
+    validateColumnName(column);
+    if (value === null) {
+      clauses.push(`${sanitizeIdentifier(column)} IS NULL`);
+    } else if (Array.isArray(value)) {
+      const sanitizedValues = value.map(v => typeof v === 'string' ? `'${v}'` : v).join(', ');
+      clauses.push(`${sanitizeIdentifier(column)} IN (${sanitizedValues})`);
+    } else {
+      clauses.push(`${sanitizeIdentifier(column)} = ${typeof value === 'string' ? `'${value}'` : value}`);
+    }
+  }
+  return clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
 }
 
 /**
- * Creates a safe ORDER BY clause.
+ * Creates an ORDER BY clause from the given order by conditions.
+ * @param orderBy The order by conditions.
  */
-export function createOrderByClause(
-  orderBy: { column: string; direction?: 'ASC' | 'DESC' }[]
+export function createOrderByClause(orderBy: Record<string, 'ASC' | 'DESC'>): string {
+  const clauses: string[] = [];
+  for (const [column, direction] of Object.entries(orderBy)) {
+    validateColumnName(column);
+    if (direction !== 'ASC' && direction !== 'DESC') {
+      throw new QueryError(QueryErrorCode.VALIDATION_ERROR, 'Order by direction must be either ASC or DESC');
+    }
+    clauses.push(`${sanitizeIdentifier(column)} ${direction}`);
+  }
+  return clauses.length > 0 ? `ORDER BY ${clauses.join(', ')}` : '';
+}
+
+/**
+ * Sanitizes a limit value.
+ * @param limit The limit value to sanitize.
+ */
+export function sanitizeLimit(limit: number | string | undefined): number {
+  if (limit === undefined) {
+    return DEFAULT_LIMIT;
+  }
+
+  const parsedLimit = typeof limit === 'string' ? parseInt(limit, 10) : limit;
+  if (isNaN(parsedLimit) || parsedLimit < 0) {
+    throw new QueryError(QueryErrorCode.INVALID_LIMIT, 'Limit must be a non-negative number');
+  }
+
+  return Math.min(parsedLimit, MAX_LIMIT);
+}
+
+/**
+ * Sanitizes an offset value.
+ * @param offset The offset value to sanitize.
+ */
+export function sanitizeOffset(offset: number | string | undefined): number {
+  if (offset === undefined) {
+    return 0;
+  }
+
+  const parsedOffset = typeof offset === 'string' ? parseInt(offset, 10) : offset;
+  if (isNaN(parsedOffset) || parsedOffset < 0) {
+    throw new QueryError(QueryErrorCode.INVALID_OFFSET, 'Offset must be a non-negative number');
+  }
+
+  return parsedOffset;
+}
+
+/**
+ * Creates a SELECT query.
+ */
+export function createSelectQuery(
+  tableName: string,
+  columns: string[] = ['*'],
+  conditions: Record<string, any> = {},
+  orderBy: Record<string, 'ASC' | 'DESC'> = {},
+  limit?: number,
+  offset?: number
 ): string {
-  if (!orderBy || orderBy.length === 0) return '';
-
-  const orderClauses = orderBy.map(({ column, direction = 'ASC' }) => {
-    const sanitizedColumn = sanitizeTableName(column);
-    const sanitizedDirection = direction.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-    return `${sanitizedColumn} ${sanitizedDirection}`;
+  validateTableName(tableName);
+  columns.forEach(column => {
+    if (column !== '*') {
+      validateColumnName(column);
+    }
   });
 
-  return `ORDER BY ${orderClauses.join(', ')}`;
+  const sanitizedColumns = columns.map(column => 
+    column === '*' ? '*' : sanitizeIdentifier(column)
+  ).join(', ');
+
+  const whereClause = createWhereClause(conditions);
+  const orderByClause = createOrderByClause(orderBy);
+  const limitClause = `LIMIT ${sanitizeLimit(limit)}`;
+  const offsetClause = offset !== undefined ? `OFFSET ${sanitizeOffset(offset)}` : '';
+
+  return format(`
+    SELECT ${sanitizedColumns}
+    FROM ${sanitizeIdentifier(tableName)}
+    ${whereClause}
+    ${orderByClause}
+    ${limitClause}
+    ${offsetClause}
+  `).trim();
 }
 
 /**
- * Validates and formats a LIMIT clause value.
+ * Sanitizes and validates a SQL query.
  */
-export function sanitizeLimit(limit?: number): string {
-  if (!limit || limit <= 0) return '';
-  return `LIMIT ${Math.floor(limit)}`;
+export async function sanitizeQuery(sql: string): Promise<string> {
+  if (!sql) {
+    throw new QueryError(QueryErrorCode.VALIDATION_ERROR, 'SQL query cannot be empty');
+  }
+
+  const parser = new Parser();
+  let ast;
+
+  try {
+    ast = parser.astify(sql);
+  } catch (error) {
+    throw new QueryError(QueryErrorCode.SYNTAX_ERROR, error instanceof Error ? error.message : 'Invalid SQL syntax');
+  }
+
+  // Check for dangerous operations
+  if (Array.isArray(ast)) {
+    for (const node of ast) {
+      if (isUnsafeNode(node)) {
+        throw new QueryError(QueryErrorCode.UNSAFE_QUERY, `Query contains dangerous operation: ${node.type}`);
+      }
+    }
+  } else if (isUnsafeNode(ast)) {
+    throw new QueryError(QueryErrorCode.UNSAFE_QUERY, `Query contains dangerous operation: ${ast.type}`);
+  }
+
+  try {
+    validateSqlAst(ast);
+  } catch (error) {
+    throw new QueryError(QueryErrorCode.VALIDATION_ERROR, error instanceof Error ? error.message : 'Invalid SQL query');
+  }
+
+  return formatSql(sql);
+}
+
+/**
+ * Validates identifiers in a SQL query.
+ */
+export function validateIdentifiers(sql: string): void {
+  const parser = new Parser();
+  let ast;
+
+  try {
+    ast = parser.astify(sql);
+  } catch (error) {
+    throw new QueryError(QueryErrorCode.SYNTAX_ERROR, error instanceof Error ? error.message : 'Invalid SQL syntax');
+  }
+
+  if (!ast || (Array.isArray(ast) && ast.length === 0)) {
+    throw new QueryError(QueryErrorCode.VALIDATION_ERROR, 'Invalid SQL query');
+  }
+
+  const node = Array.isArray(ast) ? ast[0] : ast;
+  if (node.type !== 'select') {
+    throw new QueryError(QueryErrorCode.VALIDATION_ERROR, 'Only SELECT statements are allowed');
+  }
+}
+
+/**
+ * Formats a SQL query.
+ */
+export function formatSql(sql: string): string {
+  return format(sql, {
+    language: 'postgresql',
+    keywordCase: 'upper',
+    linesBetweenQueries: 2,
+  });
+}
+
+/**
+ * Validates a SQL AST.
+ */
+export function validateSqlAst(ast: any): void {
+  if (!ast) {
+    throw new QueryError(QueryErrorCode.VALIDATION_ERROR, 'Invalid SQL query');
+  }
+
+  const nodes = Array.isArray(ast) ? ast : [ast];
+  for (const node of nodes) {
+    if (node.type === 'select') {
+      if (node.from) {
+        for (const table of node.from) {
+          if (table.table) {
+            validateTableName(table.table);
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Checks if a node contains unsafe operations.
+ */
+export function isUnsafeNode(node: any): boolean {
+  if (!node || typeof node !== 'object') {
+    return false;
+  }
+
+  if (node.type && DANGEROUS_KEYWORDS.includes(node.type.toUpperCase())) {
+    return true;
+  }
+
+  return Object.values(node).some((value: any) => {
+    if (Array.isArray(value)) {
+      return value.some(item => isUnsafeNode(item));
+    }
+    return isUnsafeNode(value);
+  });
 }
 
 export class SQLSanitizer {
@@ -109,134 +315,91 @@ export class SQLSanitizer {
     'create', 'table', 'database', 'schema', 'grant', 'revoke'
   ]);
 
-  public validateTableName(tableName: string): boolean {
-    return this.allowedTableNamePattern.test(tableName) && 
-           !this.reservedKeywords.has(tableName.toLowerCase());
+  validateTableName(tableName: string): boolean {
+    if (!tableName || !this.allowedTableNamePattern.test(tableName)) {
+      throw new QueryError(QueryErrorCode.INVALID_TABLE, `Invalid table name: ${tableName}`);
+    }
+    return true;
   }
 
-  public validateColumnName(columnName: string): boolean {
-    return this.allowedColumnNamePattern.test(columnName) &&
-           !this.reservedKeywords.has(columnName.toLowerCase());
+  validateColumnName(columnName: string): boolean {
+    if (!columnName || !this.allowedColumnNamePattern.test(columnName)) {
+      throw new QueryError(QueryErrorCode.INVALID_COLUMN, `Invalid column name: ${columnName}`);
+    }
+    return true;
   }
 
-  public escapeValue(value: any): string {
+  escapeValue(value: any): string {
     if (value === null) return 'NULL';
     if (typeof value === 'number') return value.toString();
     if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
-    if (value instanceof Date) return `'${value.toISOString()}'`;
     return `'${value.toString().replace(/'/g, "''")}'`;
   }
 
-  public sanitizeQuery(query: string): string {
-    // Remove comments
-    query = query.replace(/--.*$/gm, '');
-    query = query.replace(/\/\*[\s\S]*?\*\//g, '');
-
-    // Check for dangerous keywords
-    const dangerousPatterns = [
-      /;\s*drop\s/i,
-      /;\s*delete\s/i,
-      /;\s*truncate\s/i,
-      /;\s*alter\s/i,
-      /;\s*grant\s/i,
-      /;\s*revoke\s/i,
-      /union\s+all/i,
-      /union\s+select/i,
-    ];
-
-    for (const pattern of dangerousPatterns) {
-      if (pattern.test(query)) {
-        throw new QueryError('Query contains dangerous operations', 'DANGEROUS_QUERY');
-      }
-    }
-
-    // Format the query for consistency
-    return format(query, {
-      language: 'postgresql',
-      keywordCase: 'upper',
-    });
-  }
-
-  public sanitizeTableQuery(tableName: string, filters?: Record<string, any>): string {
-    if (!this.validateTableName(tableName)) {
-      throw new QueryError('Invalid table name', 'INVALID_TABLE');
-    }
-
+  sanitizeTableQuery(tableName: string, filters?: Record<string, any>): string {
+    this.validateTableName(tableName);
     let query = `SELECT * FROM "${tableName}"`;
-
+    
     if (filters && Object.keys(filters).length > 0) {
-      const { clause, values } = createWhereClause(filters);
-      query += ` ${clause}`;
-      return format(query, { language: 'postgresql' });
+      const conditions = Object.entries(filters)
+        .map(([column, value]) => {
+          this.validateColumnName(column);
+          return `"${column}" = ${this.escapeValue(value)}`;
+        })
+        .join(' AND ');
+      query += ` WHERE ${conditions}`;
     }
-
-    return format(query, { language: 'postgresql' });
+    
+    return query;
   }
 
-  public sanitizeUpdateQuery(
+  sanitizeUpdateQuery(
     tableName: string,
     primaryKey: { column: string; value: any },
     data: Record<string, any>
   ): string {
-    if (!this.validateTableName(tableName)) {
-      throw new QueryError('Invalid table name', 'INVALID_TABLE');
-    }
+    this.validateTableName(tableName);
+    this.validateColumnName(primaryKey.column);
 
-    if (!this.validateColumnName(primaryKey.column)) {
-      throw new QueryError('Invalid primary key column name', 'INVALID_COLUMN');
-    }
-
-    const setClauses = Object.entries(data)
-      .filter(([column]) => this.validateColumnName(column))
-      .map(([column, value]) => `"${column}" = ${this.escapeValue(value)}`)
+    const setClause = Object.entries(data)
+      .map(([column, value]) => {
+        this.validateColumnName(column);
+        return `"${column}" = ${this.escapeValue(value)}`;
+      })
       .join(', ');
 
-    const query = `
+    return `
       UPDATE "${tableName}"
-      SET ${setClauses}
+      SET ${setClause}
       WHERE "${primaryKey.column}" = ${this.escapeValue(primaryKey.value)}
-      RETURNING *;
     `;
-
-    return format(query, { language: 'postgresql' });
   }
 
-  public sanitizeDeleteQuery(
+  sanitizeDeleteQuery(
     tableName: string,
     primaryKey: { column: string; value: any }
   ): string {
-    if (!this.validateTableName(tableName)) {
-      throw new QueryError('Invalid table name', 'INVALID_TABLE');
-    }
+    this.validateTableName(tableName);
+    this.validateColumnName(primaryKey.column);
 
-    if (!this.validateColumnName(primaryKey.column)) {
-      throw new QueryError('Invalid primary key column name', 'INVALID_COLUMN');
-    }
-
-    const query = `
+    return `
       DELETE FROM "${tableName}"
       WHERE "${primaryKey.column}" = ${this.escapeValue(primaryKey.value)}
-      RETURNING *;
     `;
-
-    return format(query, { language: 'postgresql' });
   }
 
-  public sanitizeInsertQuery(tableName: string, data: Record<string, any>): string {
-    if (!this.validateTableName(tableName)) {
-      throw new QueryError('Invalid table name', 'INVALID_TABLE');
-    }
-
-    const columns = Object.keys(data).filter(column => this.validateColumnName(column));
-    const values = columns.map(column => this.escapeValue(data[column]));
-
-    const query = `
-      INSERT INTO "${tableName}" (${columns.map(c => `"${c}"`).join(', ')})
+  sanitizeInsertQuery(tableName: string, data: Record<string, any>): string {
+    this.validateTableName(tableName);
+    
+    const columns = Object.keys(data);
+    columns.forEach(column => this.validateColumnName(column));
+    
+    const values = Object.values(data).map(value => this.escapeValue(value));
+    
+    return `
+      INSERT INTO "${tableName}" ("${columns.join('", "')}")
       VALUES (${values.join(', ')})
-      RETURNING *;
     `;
-
-    return format(query, { language: 'postgresql' });
   }
 }
 

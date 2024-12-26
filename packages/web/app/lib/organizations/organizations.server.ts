@@ -1,137 +1,94 @@
+import { db } from "../db/db.server";
+import { organizations } from "../db/schema/organizations";
+import { users } from "../db/schema/auth";
+import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
-import { db } from "../../lib/db/db.server";
-import { organizations, organizationMembers } from "../../lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import type { Organization } from "../db/schema/organizations";
+import type { Role } from "../auth/rbac.server";
 
-export interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string | null;
-  createdAt: Date;
+export interface OrganizationWithRole extends Organization {
+  role: Role;
+  currentOrganization: boolean;
 }
 
-export interface CreateOrganizationInput {
-  name: string;
-  slug: string;
-  description?: string;
-  userId: string;
-}
-
-interface UpdateOrganizationInput {
-  name: string;
-}
-
-interface AddOrganizationMemberInput {
-  organizationId: string;
-  userId: string;
-  role: "admin" | "member";
-}
-
-export async function createOrganization({ name, slug, description, userId }: CreateOrganizationInput) {
-  const id = uuidv4();
-
-  const [organization] = await db.insert(organizations)
-    .values({
-      id,
-      name,
-      slug,
-      description,
-    })
-    .returning();
-
-  // Add the creator as an admin member
-  await db.insert(organizationMembers).values({
-    userId,
-    organizationId: organization.id,
-    role: "admin",
+export async function getOrganizationById(id: string): Promise<OrganizationWithRole | null> {
+  const org = await db.query.organizations.findFirst({
+    where: eq(organizations.id, id),
   });
 
-  return organization;
+  if (!org) return null;
+
+  return {
+    ...org,
+    role: "OWNER",
+    currentOrganization: false,
+  };
 }
 
-export async function updateOrganization(id: string, { name }: UpdateOrganizationInput) {
-  const [organization] = await db.update(organizations)
-    .set({
-      name,
-    })
+export async function createOrganization(
+  name: string,
+  userId: string
+): Promise<OrganizationWithRole> {
+  const id = uuidv4();
+
+  await db.insert(organizations).values({
+    id,
+    name,
+  });
+
+  await db
+    .update(users)
+    .set({ organizationId: id })
+    .where(eq(users.id, userId));
+
+  return {
+    id,
+    name,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    role: "OWNER",
+    currentOrganization: true,
+  };
+}
+
+export async function getOrganizationsByUserId(
+  userId: string
+): Promise<OrganizationWithRole[]> {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    with: {
+      organization: true,
+    },
+  });
+
+  if (!user?.organization) return [];
+
+  return [{
+    ...user.organization,
+    role: "OWNER",
+    currentOrganization: true,
+  }];
+}
+
+export async function updateOrganization(
+  id: string,
+  data: Partial<OrganizationWithRole>
+): Promise<OrganizationWithRole> {
+  const { role, currentOrganization, ...orgData } = data;
+
+  const updatedOrg = await db
+    .update(organizations)
+    .set(orgData)
     .where(eq(organizations.id, id))
     .returning();
 
-  return organization;
+  return {
+    ...updatedOrg[0],
+    role: "OWNER",
+    currentOrganization: false,
+  };
 }
 
-export async function deleteOrganization(id: string) {
-  // First delete all members
-  await db.delete(organizationMembers).where(eq(organizationMembers.organizationId, id));
-  
-  // Then delete the organization
+export async function deleteOrganization(id: string): Promise<void> {
   await db.delete(organizations).where(eq(organizations.id, id));
-}
-
-export async function addOrganizationMember({ organizationId, userId, role }: AddOrganizationMemberInput) {
-  const [member] = await db.insert(organizationMembers).values({
-    userId,
-    organizationId,
-    role,
-  }).returning();
-
-  return member;
-}
-
-export async function removeOrganizationMember(organizationId: string, userId: string) {
-  await db.delete(organizationMembers).where(
-    and(
-      eq(organizationMembers.organizationId, organizationId),
-      eq(organizationMembers.userId, userId)
-    )
-  );
-}
-
-export async function getUserOrganizations(userId: string): Promise<Organization[]> {
-  const userOrgs = await db
-    .select({
-      id: organizations.id,
-      name: organizations.name,
-      slug: organizations.slug,
-      description: organizations.description,
-      createdAt: organizations.createdAt,
-    })
-    .from(organizationMembers)
-    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
-    .where(eq(organizationMembers.userId, userId));
-
-  return userOrgs;
-}
-
-export async function getOrganization(organizationId: string, userId: string): Promise<Organization | undefined> {
-  const [organization] = await db
-    .select({
-      id: organizations.id,
-      name: organizations.name,
-      slug: organizations.slug,
-      description: organizations.description,
-      createdAt: organizations.createdAt,
-    })
-    .from(organizationMembers)
-    .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
-    .where(
-      and(
-        eq(organizationMembers.organizationId, organizationId),
-        eq(organizationMembers.userId, userId)
-      )
-    );
-
-  return organization;
-}
-
-export async function getOrganizationRole(organizationId: string, userId: string): Promise<string | undefined> {
-  const member = await db.query.organizationMembers.findFirst({
-    where: and(
-      eq(organizationMembers.organizationId, organizationId),
-      eq(organizationMembers.userId, userId)
-    ),
-  });
-
-  return member?.role;
 }

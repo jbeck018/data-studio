@@ -1,6 +1,6 @@
 import { redirect } from '@remix-run/node';
 import { db } from '../../lib/db/db.server';
-import { databaseConnections } from '../../lib/db/schema';
+import { databaseConnections } from '../../lib/db/schema/connections';
 import { eq, and } from 'drizzle-orm';
 
 export async function requireConnection(
@@ -9,10 +9,7 @@ export async function requireConnection(
   redirectTo: string = new URL(request.url).pathname,
 ) {
   const connection = await db.query.databaseConnections.findFirst({
-    where: and(
-      eq(databaseConnections.organizationId, organizationId),
-      eq(databaseConnections.archived, false),
-    ),
+    where: eq(databaseConnections.organizationId, organizationId),
   });
 
   if (!connection) {
@@ -25,13 +22,7 @@ export async function requireConnection(
 
 export async function hasConnection(organizationId: string): Promise<boolean> {
   const connection = await db.query.databaseConnections.findFirst({
-    where: and(
-      eq(databaseConnections.organizationId, organizationId),
-      eq(databaseConnections.archived, false),
-    ),
-    columns: {
-      id: true,
-    },
+    where: eq(databaseConnections.organizationId, organizationId),
   });
 
   return !!connection;

@@ -1,0 +1,5 @@
+1. This is a React Project that uses pnpm as a package manager.
+2. The project is a database management studio with introspection capabilities.
+3. The project is built using Remix and TailwindCSS.
+4. Whenever completing a new feature you should always check to make sure there are no type errors.
+5. Use Shadcn UI for UI components.
