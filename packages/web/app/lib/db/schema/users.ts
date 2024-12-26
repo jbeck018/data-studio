@@ -1,11 +1,10 @@
 import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { organizations } from './auth';
-import { connectionPermissions } from './connections';
-import { organizationMemberships } from './auth';
+import { organizationMemberships, organizations } from './organizations';
+import { connectionPermissions } from './permissions';
 
 export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
   hashedPassword: text('hashed_password').notNull(),

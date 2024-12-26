@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Form, useSubmit } from "@remix-run/react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import type { DatabaseConnection } from "../lib/connections/config.server";
+import type { DatabaseConnection } from "../lib/db/schema";
 import { Badge } from "./ui/badge";
 
 interface ConnectionSelectorProps {

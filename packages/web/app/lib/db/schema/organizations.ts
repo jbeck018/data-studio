@@ -12,7 +12,7 @@ export enum OrganizationRole {
 }
 
 export const organizations = pgTable("organizations", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: text("id").primaryKey(),
   name: text("name").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -20,7 +20,7 @@ export const organizations = pgTable("organizations", {
 
 export const organizationMemberships = pgTable("organization_memberships", {
   id: uuid("id").primaryKey(),
-  organizationId: uuid("organization_id")
+  organizationId: text("organization_id")
     .notNull()
     .references(() => organizations.id),
   userId: uuid("user_id")

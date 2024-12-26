@@ -1,55 +1,24 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
-import { relations } from "drizzle-orm";
 
-import * as auth from "./auth";
+import * as audit from './audit';
 import * as organizations from "./organizations";
 import * as connections from "./connections";
 import * as queries from "./queries";
+import * as permissions from "./permissions";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
 export const schema = {
-  ...auth,
+  ...audit,
   ...organizations,
   ...connections,
   ...queries,
+  ...permissions
 };
-
-export const usersRelations = relations(auth.users, ({ many }) => ({
-  organizationMemberships: many(organizations.organizationMemberships),
-  databaseConnections: many(connections.databaseConnections),
-}));
-
-export const organizationsRelations = relations(organizations.organizations, ({ many }) => ({
-  members: many(organizations.organizationMemberships),
-  connections: many(connections.databaseConnections),
-}));
-
-export const organizationMembershipsRelations = relations(organizations.organizationMemberships, ({ one }) => ({
-  user: one(auth.users, {
-    fields: [organizations.organizationMemberships.userId],
-    references: [auth.users.id],
-  }),
-  organization: one(organizations.organizations, {
-    fields: [organizations.organizationMemberships.organizationId],
-    references: [organizations.organizations.id],
-  }),
-}));
-
-export const databaseConnectionsRelations = relations(connections.databaseConnections, ({ one }) => ({
-  organization: one(organizations.organizations, {
-    fields: [connections.databaseConnections.organizationId],
-    references: [organizations.organizations.id],
-  }),
-  createdBy: one(auth.users, {
-    fields: [connections.databaseConnections.createdById],
-    references: [auth.users.id],
-  }),
-}));
 
 export const db = drizzle(pool, { schema });
 
@@ -62,7 +31,10 @@ if (process.env.NODE_ENV !== "test") {
   });
 }
 
-export * from "./auth";
-export * from "./organizations";
-export * from "./connections";
-export * from "./queries";
+// Ensure there are no overlapping exports and clarify any ambiguous exports
+export * from './connections';
+export * from './organizations';
+export * from './audit';
+export * from './queries';
+export * from './users';
+export * from './permissions';

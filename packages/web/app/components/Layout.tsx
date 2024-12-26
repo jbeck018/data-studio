@@ -6,15 +6,13 @@ import {
   SunIcon,
   MoonIcon,
   UserCircleIcon,
-  Cog6ToothIcon,
-  BuildingLibraryIcon,
 } from "@heroicons/react/24/outline";
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment } from "react";
 import clsx from "clsx";
 import { ConnectionSelector } from "./ConnectionSelector";
-import { ConnectionStatus } from "./ConnectionStatus"; // Add this line
-import type { DatabaseConnection } from "../lib/db/schema/connections";
+import { ConnectionStatus } from "./ConnectionStatus";
+import type { DatabaseConnection } from "../lib/db/schema";
 
 interface User {
   id: string;
@@ -69,7 +67,7 @@ export default function Layout({ children, user, connections = [], activeConnect
             {/* Connection Selector */}
             <div className="mt-4 px-4 space-y-2">
               <ConnectionSelector
-                connections={connections}
+                connections={connections as DatabaseConnection[]}
                 activeConnectionId={activeConnection?.id}
                 onConnectionChange={handleConnectionChange}
               />

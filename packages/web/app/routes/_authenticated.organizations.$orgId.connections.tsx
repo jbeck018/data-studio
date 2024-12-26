@@ -3,7 +3,7 @@ import { Form, useLoaderData } from "@remix-run/react";
 import { requireUser } from "../lib/auth/session.server";
 import { getOrganizationRole } from "../lib/organizations/organizations.server";
 import { db } from "../lib/db/db.server";
-import { databaseConnections } from "../lib/db/schema/connections";
+import { databaseConnections } from "../lib/db/schema";
 import { eq } from "drizzle-orm";
 import { ConnectionManager } from "../lib/db/connection-manager.server";
 import { z } from "zod";

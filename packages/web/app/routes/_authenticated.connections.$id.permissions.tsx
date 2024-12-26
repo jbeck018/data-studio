@@ -3,7 +3,7 @@ import { json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { db } from '../lib/db/db.server';
 import { requireUser } from '../lib/auth/auth.server';
-import { databaseConnections } from '../lib/db/schema/connections';
+import { databaseConnections } from '../lib/db/schema';
 import { connectionPermissions } from '../lib/db/schema/permissions';
 import { users } from '../lib/db/schema/auth';
 import { eq } from 'drizzle-orm';

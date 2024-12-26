@@ -1,6 +1,6 @@
 import { redirect } from '@remix-run/node';
 import { db } from '../../lib/db/db.server';
-import { databaseConnections } from '../../lib/db/schema/connections';
+import { databaseConnections } from '../../lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export async function requireConnection(

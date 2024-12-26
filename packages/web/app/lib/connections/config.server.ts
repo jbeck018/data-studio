@@ -1,17 +1,22 @@
 import { db } from "../db/db.server";
 import { databaseConnections } from "../db/schema";
 import { eq, and } from "drizzle-orm";
-import type { InferSelectModel } from 'drizzle-orm';
 import { z } from "zod";
-import type { ConnectionConfig, DatabaseConnection } from "~/types";
-
-// Base type from database schema
-export type DatabaseConnection = InferSelectModel<typeof databaseConnections>;
+import type { DatabaseConnection, ConnectionType } from "../db/schema/connections";
 
 // Schema for validating inputs
 const BaseConnectionSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   type: z.enum(["POSTGRES", "MYSQL", "SQLITE", "MSSQL", "ORACLE", "MONGODB", "REDIS"] as const),
+  host: z.string().optional(),
+  port: z.string().optional(),
+  database: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  ssl: z.boolean().optional(),
+  filepath: z.string().optional(),
+  authSource: z.string().optional(),
+  replicaSet: z.string().optional(),
 });
 
 const StandardConnectionSchema = BaseConnectionSchema.extend({
@@ -21,7 +26,6 @@ const StandardConnectionSchema = BaseConnectionSchema.extend({
   database: z.string().min(1, "Database name is required"),
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
-  ssl: z.boolean().default(false),
 });
 
 const MongoDBConnectionSchema = BaseConnectionSchema.extend({
@@ -31,9 +35,6 @@ const MongoDBConnectionSchema = BaseConnectionSchema.extend({
   database: z.string().min(1, "Database name is required"),
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
-  ssl: z.boolean().default(false),
-  authSource: z.string(),
-  replicaSet: z.string().optional(),
 });
 
 const RedisConnectionSchema = BaseConnectionSchema.extend({
@@ -43,7 +44,6 @@ const RedisConnectionSchema = BaseConnectionSchema.extend({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
   database: z.string().default("0"),
-  ssl: z.boolean().default(false),
 });
 
 const SQLiteConnectionSchema = BaseConnectionSchema.extend({
@@ -51,66 +51,16 @@ const SQLiteConnectionSchema = BaseConnectionSchema.extend({
   filepath: z.string().min(1, "File path is required"),
 });
 
-// Connection configuration types
-export interface BaseConnectionConfig {
-  type: string;
-  name: string;
-  host?: string;
-  port?: string;
-  username?: string;
-  password?: string;
-  ssl?: boolean;
-  database?: string;
-}
-
-export interface StandardConnectionConfig extends BaseConnectionConfig {
-  type: 'POSTGRES' | 'MYSQL' | 'MSSQL' | 'ORACLE';
-  host: string;
-  port: string;
-  database: string;
-  username: string;
-  password: string;
-  ssl: boolean;
-}
-
-export interface SQLiteConnectionConfig extends BaseConnectionConfig {
-  type: 'SQLITE';
-  filepath: string;
-}
-
-export interface MongoDBConnectionConfig extends BaseConnectionConfig {
-  type: 'MONGODB';
-  host: string;
-  port: string;
-  database: string;
-  username: string;
-  password: string;
-  ssl: boolean;
-  authSource: string;
+// Updated ConnectionConfig type
+export type ConnectionConfig = Omit<DatabaseConnection, 'id'> & {
+  organizationId: string;
+  createdById: string;
+  filepath?: string;
+  authSource?: string;
   replicaSet?: string;
-}
+};
 
-export interface RedisConnectionConfig extends BaseConnectionConfig {
-  type: 'REDIS';
-  host: string;
-  port: string;
-  username: string;
-  password: string;
-  database: string;
-  ssl: boolean;
-}
-
-export type ConnectionType = 'POSTGRES' | 'MYSQL' | 'MSSQL' | 'ORACLE' | 'SQLITE' | 'MONGODB' | 'REDIS';
-
-export type ConnectionConfig =
-  | StandardConnectionConfig
-  | SQLiteConnectionConfig
-  | MongoDBConnectionConfig
-  | RedisConnectionConfig;
-
-export interface ConnectionInput {
-  type: ConnectionType;
-  name: string;
+export type ConnectionInput = z.infer<typeof BaseConnectionSchema> & {
   host?: string;
   port?: string;
   database?: string;
@@ -120,50 +70,52 @@ export interface ConnectionInput {
   filepath?: string;
   authSource?: string;
   replicaSet?: string;
-}
+};
 
-function getDefaultPort(type: ConnectionType): number {
+export function getDefaultPort(type: ConnectionType): number {
   switch (type) {
-    case 'POSTGRES':
+    case "POSTGRES":
       return 5432;
-    case 'MYSQL':
+    case "MYSQL":
       return 3306;
-    case 'MSSQL':
-      return 1433;
-    case 'ORACLE':
-      return 1521;
-    case 'MONGODB':
+    case "MONGODB":
       return 27017;
-    case 'REDIS':
+    case "REDIS":
       return 6379;
+    case "MSSQL":
+      return 1433;
+    case "ORACLE":
+      return 1521;
     default:
-      throw new Error(`Unsupported connection type: ${type}`);
+      return 0;
   }
 }
 
+export { type DatabaseConnection };
+
 export class ConnectionConfigManager {
   async createConnection(
-    config: ConnectionConfig & {
-      name: string;
-      type: ConnectionType;
-      organizationId: string;
-      createdById: string;
-    }
+    config: z.infer<typeof StandardConnectionSchema> | z.infer<typeof MongoDBConnectionSchema> | z.infer<typeof RedisConnectionSchema> | z.infer<typeof SQLiteConnectionSchema>
   ): Promise<DatabaseConnection> {
+    const connectionData: ConnectionConfig = {
+      name: config.name,
+      type: config.type,
+      host: config.host,
+      port: config.port,
+      database: config.database,
+      username: config.username,
+      password: config.password,
+      ssl: config.ssl,
+      filepath: config.filepath,
+      authSource: config.authSource,
+      replicaSet: config.replicaSet,
+      organizationId: config.organizationId,
+      createdById: config.createdById,
+    };
+
     const [connection] = await db
       .insert(databaseConnections)
-      .values({
-        name: config.name,
-        type: config.type,
-        host: config.host,
-        port: config.port,
-        username: config.username,
-        password: config.password,
-        database: config.database,
-        ssl: config.ssl,
-        organizationId: config.organizationId,
-        createdById: config.createdById,
-      })
+      .values(connectionData)
       .returning();
 
     return connection;
@@ -238,23 +190,30 @@ export class ConnectionConfigManager {
 }
 
 export async function createConnection(
-  config: ConnectionConfig
+  config: z.infer<typeof StandardConnectionSchema> | z.infer<typeof MongoDBConnectionSchema> | z.infer<typeof RedisConnectionSchema> | z.infer<typeof SQLiteConnectionSchema>
 ): Promise<DatabaseConnection> {
-  const connection = await db.insert(databaseConnections).values({
-    name: config.name || "New Connection",
+  const connectionData: ConnectionConfig = {
+    name: config.name,
     type: config.type,
-    host: config.host || "",
-    port: config.port || "",
-    database: config.database || "",
-    username: config.username || "",
-    password: config.password || "",
-    ssl: config.ssl ? "true" : null,
-    filepath: config.filepath || null,
+    host: config.host,
+    port: config.port,
+    database: config.database,
+    username: config.username,
+    password: config.password,
+    ssl: config.ssl,
+    filepath: config.filepath,
+    authSource: config.authSource,
+    replicaSet: config.replicaSet,
     organizationId: config.organizationId,
-    lastUsed: null
-  }).returning();
+    createdById: config.createdById,
+  };
 
-  return connection[0];
+  const [connection] = await db
+    .insert(databaseConnections)
+    .values(connectionData)
+    .returning();
+
+  return connection;
 }
 
 export async function updateConnection(
@@ -340,14 +299,14 @@ function createConnectionConfig(input: ConnectionInput): ConnectionConfig {
         username: input.username || '',
         password: input.password || '',
         ssl: input.ssl || false,
-      } as StandardConnectionConfig;
+      };
 
     case 'SQLITE':
       return {
         ...baseConfig,
         type,
         filepath: input.filepath || ':memory:',
-      } as SQLiteConnectionConfig;
+      };
 
     case 'MONGODB':
       return {
@@ -361,7 +320,7 @@ function createConnectionConfig(input: ConnectionInput): ConnectionConfig {
         ssl: input.ssl || false,
         authSource: input.authSource || 'admin',
         replicaSet: input.replicaSet,
-      } as MongoDBConnectionConfig;
+      };
 
     case 'REDIS':
       return {
@@ -373,7 +332,7 @@ function createConnectionConfig(input: ConnectionInput): ConnectionConfig {
         password: input.password || '',
         database: (input.database || '0').toString(),
         ssl: input.ssl || false,
-      } as RedisConnectionConfig;
+      };
 
     default:
       throw new Error(`Unsupported connection type: ${type}`);

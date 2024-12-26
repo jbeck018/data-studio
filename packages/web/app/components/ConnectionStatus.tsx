@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DatabaseConnection } from '../lib/db/schema/connections';
+import { DatabaseConnection } from '../lib/db/schema';
 
 interface ConnectionStatusProps {
   connection: DatabaseConnection | null;
