@@ -1,49 +1,37 @@
 import { redirect } from "@remix-run/node";
-import { getUserFromSession } from "./session.server";
-import type { UserWithOrganization } from "~/types";
-import type { Role } from "~/lib/db/schema/auth";
+import { requireUser } from "./auth.server";
+import type { Role } from "~/lib/db/schema/types";
+import { ROLE_LEVELS } from "~/lib/db/schema/types";
 
-const ROLE_LEVELS = {
-  OWNER: 3,
-  ADMIN: 2,
-  MEMBER: 1,
-  VIEWER: 0,
-} as const;
+export async function requireRole(request: Request, requiredRole: Role) {
+  const user = await requireUser(request);
 
-export async function requireUser(request: Request): Promise<UserWithOrganization> {
-  const user = await getUserFromSession(request);
-  if (!user) {
+  // Get the highest role from user's organization memberships
+  const highestRole = user.organizationMemberships?.reduce((highest, membership) => {
+    const currentRoleLevel = ROLE_LEVELS[membership.role as Role];
+    const highestRoleLevel = ROLE_LEVELS[highest as Role];
+    return currentRoleLevel > highestRoleLevel ? membership.role : highest;
+  }, "VIEWER" as Role);
+
+  if (!highestRole) {
     throw redirect("/login");
   }
+
+  const requiredRoleLevel = ROLE_LEVELS[requiredRole];
+  const userRoleLevel = ROLE_LEVELS[highestRole];
+
+  if (userRoleLevel < requiredRoleLevel) {
+    throw redirect("/unauthorized");
+  }
+
   return user;
 }
 
-export function requireRole(user: UserWithOrganization, requiredRole: Role) {
-  const membership = user.organizationMemberships[0];
-  if (!membership) {
-    throw new Error("User has no organization membership");
-  }
-
-  const userRoleLevel = ROLE_LEVELS[membership.role as keyof typeof ROLE_LEVELS];
-  const requiredRoleLevel = ROLE_LEVELS[requiredRole];
-
-  if (userRoleLevel < requiredRoleLevel) {
-    throw new Error("Insufficient permissions");
-  }
+export async function requireAdmin(request: Request) {
+  return requireRole(request, "ADMIN");
 }
 
-export function requireOwner(user: UserWithOrganization) {
-  return requireRole(user, "OWNER");
+export async function requireOwner(request: Request) {
+  return requireRole(request, "OWNER");
 }
 
-export function requireAdmin(user: UserWithOrganization) {
-  return requireRole(user, "ADMIN");
-}
-
-export function requireMember(user: UserWithOrganization) {
-  return requireRole(user, "MEMBER");
-}
-
-export function requireViewer(user: UserWithOrganization) {
-  return requireRole(user, "VIEWER");
-}

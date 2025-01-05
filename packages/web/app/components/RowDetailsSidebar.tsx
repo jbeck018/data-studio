@@ -5,7 +5,8 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
-  SheetTitle
+  SheetTitle,
+  SheetDescription
 } from "~/components/ui/sheet";
 
 interface RowDetailsSidebarProps {
@@ -34,7 +35,7 @@ export function RowDetailsSidebar({
         <SheetHeader>
           <SheetTitle>Row Details</SheetTitle>
         </SheetHeader>
-        <SheetBody>
+        <SheetDescription>
           <div className="mt-6 divide-y divide-gray-200">
             {fields.map((field) => (
               <div key={field.name} className="py-4">
@@ -52,7 +53,7 @@ export function RowDetailsSidebar({
               </div>
             ))}
           </div>
-        </SheetBody>
+        </SheetDescription>
       </SheetContent>
     </Sheet>
   );

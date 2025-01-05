@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import type { ChartType, ChartData } from './ChartComponent';
+import type { SavedChart } from '../../utils/chartStorage';
+import { deleteChart, loadSavedCharts } from '../../utils/chartStorage';
+import { Button } from '../ui/button';
+import type { ChartData, ChartType } from './ChartComponent';
 import { ChartComponent } from './ChartComponent';
 import { ChartCustomizer } from './ChartCustomizer';
 import { ChartSaveModal } from './ChartSaveModal';
-import { SmartVisualization, type DataInsight } from './SmartVisualization';
-import type { SavedChart } from '../../utils/chartStorage';
-import { loadSavedCharts, deleteChart } from '../../utils/chartStorage';
+import { type DataInsight, SmartVisualization } from './SmartVisualization';
 
 export interface Column {
   name: string;
@@ -247,7 +248,7 @@ export function VisualizationManager({ queryResult, queryId }: VisualizationMana
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {suggestions.map((chartData, index) => (
-            <button
+            <Button
               key={`${chartData.chartType}-${index}`}
               onClick={() => handleChartSelect(chartData)}
               className={`p-4 rounded-lg border transition-colors ${
@@ -257,7 +258,7 @@ export function VisualizationManager({ queryResult, queryId }: VisualizationMana
               }`}
             >
               <ChartComponent data={chartData} height={200} />
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -267,19 +268,19 @@ export function VisualizationManager({ queryResult, queryId }: VisualizationMana
           {suggestions.length} suggested visualizations
         </div>
         <div className="flex items-center space-x-2">
-          <button
+          <Button
             onClick={() => setShowCustomizer(!showCustomizer)}
             className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-secondary dark:hover:bg-dark-bg-secondary rounded-md transition-colors"
           >
             {showCustomizer ? 'Hide Customizer' : 'Customize Chart'}
-          </button>
+          </Button>
           {selectedChart && (
-            <button
+            <Button
               onClick={() => setShowSaveModal(true)}
               className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md transition-colors"
             >
               Save Chart
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -317,7 +318,7 @@ export function VisualizationManager({ queryResult, queryId }: VisualizationMana
                 className="relative group rounded-lg border border-light-border dark:border-dark-border p-4"
               >
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
+                  <Button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteChart(chart.id);
@@ -325,12 +326,12 @@ export function VisualizationManager({ queryResult, queryId }: VisualizationMana
                     className="p-1 text-light-text-secondary dark:text-dark-text-secondary hover:text-red-600 dark:hover:text-red-400"
                   >
                     <span className="sr-only">Delete chart</span>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                  </button>
+                  </Button>
                 </div>
-                <button
+                <Button
                   onClick={() => handleChartSelect(chart)}
                   className="w-full text-left"
                 >
@@ -345,7 +346,7 @@ export function VisualizationManager({ queryResult, queryId }: VisualizationMana
                   <div className="mt-2">
                     <ChartComponent data={chart} height={150} />
                   </div>
-                </button>
+                </Button>
               </div>
             ))}
           </div>

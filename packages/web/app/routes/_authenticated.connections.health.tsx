@@ -28,19 +28,19 @@ async function getConnectionHealth(connectionId: string): Promise<ConnectionHeal
     db.query.queryHistory.findMany({
       where: and(
         eq(queryHistory.connectionId, connectionId),
-        gte(queryHistory.executedAt, hourAgo)
+        gte(queryHistory.createdAt, hourAgo)
       ),
     }),
     db.query.queryHistory.findMany({
       where: and(
         eq(queryHistory.connectionId, connectionId),
-        gte(queryHistory.executedAt, dayAgo)
+        gte(queryHistory.createdAt, dayAgo)
       ),
     }),
     db.query.queryHistory.findMany({
       where: and(
         eq(queryHistory.connectionId, connectionId),
-        gte(queryHistory.executedAt, weekAgo)
+        gte(queryHistory.createdAt, weekAgo)
       ),
     }),
   ]);
@@ -52,12 +52,12 @@ async function getConnectionHealth(connectionId: string): Promise<ConnectionHeal
     connectionId,
     name: connection.name,
     type: connection.type,
-    status: poolStats.isHealthy ? 'healthy' : 'unhealthy',
-    activeConnections: poolStats.activeConnections,
+    status: poolStats.isConnected ? 'healthy' : 'unhealthy',
+    activeConnections: poolStats.activeQueries,
     totalQueries: weekQueries.length,
-    averageQueryTime: weekQueries.reduce((acc, q) => acc + q.executionTime, 0) / weekQueries.length || 0,
+    averageQueryTime: weekQueries.reduce((acc, q) => acc + (Number(q.executionTimeMs) || 0), 0) / weekQueries.length || 0,
     errorCount: weekQueries.filter(q => q.error).length,
-    lastHealthCheck: poolStats.lastHealthCheck.toISOString(),
+    lastHealthCheck: new Date().toISOString(), // Using current time since we just checked
     usageStats: {
       lastHour: hourQueries.length,
       lastDay: dayQueries.length,
@@ -68,9 +68,12 @@ async function getConnectionHealth(connectionId: string): Promise<ConnectionHeal
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
+  if (!user.currentOrganization?.id) {
+    throw new Error("No organization selected");
+  }
 
   const userConnections = await db.query.databaseConnections.findMany({
-    where: eq(databaseConnections.organizationId, user.currentOrganization),
+    where: eq(databaseConnections.organizationId, user.currentOrganization.id),
   });
 
   const healthData = await Promise.all(
@@ -82,6 +85,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export async function action({ request }: ActionFunctionArgs) {
   const user = await requireUser(request);
+  if (!user.currentOrganization?.id) {
+    throw new Error("No organization selected");
+  }
+
   const formData = await request.formData();
   const action = formData.get('action');
   const connectionId = formData.get('connectionId');
@@ -94,7 +101,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const connection = await db.query.databaseConnections.findFirst({
     where: and(
       eq(databaseConnections.id, connectionId),
-      eq(databaseConnections.organizationId, user.currentOrganization)
+      eq(databaseConnections.organizationId, user.currentOrganization.id)
     ),
   });
 

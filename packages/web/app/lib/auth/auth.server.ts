@@ -1,10 +1,11 @@
 import { db } from "~/lib/db/db.server";
-import { users, organizations, organizationMemberships, type Role } from "~/lib/db/schema/auth";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import type { UserWithOrganization } from "~/types";
+import type { UserWithOrganization } from "~/lib/db/schema/types";
 import { createCookieSessionStorage, redirect } from "@remix-run/node";
 import { v4 as uuidv4 } from "uuid";
+import { organizationMemberships, organizations } from "../db/schema";
+import { users } from "../db/schema";
 
 export async function createUser(email: string, password: string, name: string) {
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -43,12 +44,12 @@ export async function createUser(email: string, password: string, name: string) 
   return userWithOrg;
 }
 
-export async function verifyLogin(email: string, password: string) {
+export async function verifyLogin(email: string, password: string): Promise<UserWithOrganization | null> {
   const user = await db.query.users.findFirst({
     where: eq(users.email, email),
     with: {
-      organization: true,
       organizationMemberships: true,
+      connectionPermissions: true,
     },
   });
 
@@ -57,27 +58,66 @@ export async function verifyLogin(email: string, password: string) {
   const isValid = await bcrypt.compare(password, user.hashedPassword);
   if (!isValid) return null;
 
-  return user;
+  // Get the user's organization
+  const org = await db.query.organizations.findFirst({
+    where: eq(organizations.id, user.organizationId),
+  });
+
+  if (!org) return null;
+
+  return {
+    ...user,
+    organization: org,
+    currentOrganization: org,
+  };
 }
 
 export async function getUserById(id: string): Promise<UserWithOrganization | null> {
-  return db.query.users.findFirst({
+  const user = await db.query.users.findFirst({
     where: eq(users.id, id),
     with: {
-      organization: true,
       organizationMemberships: true,
+      connectionPermissions: true,
     },
   });
+
+  if (!user) return null;
+
+  const org = await db.query.organizations.findFirst({
+    where: eq(organizations.id, user.organizationId),
+  });
+
+  if (!org) return null;
+
+  return {
+    ...user,
+    organization: org,
+    currentOrganization: org,
+  };
 }
 
-export async function getUserByEmail(email: string) {
-  return db.query.users.findFirst({
+export async function getUserByEmail(email: string): Promise<UserWithOrganization | null> {
+  const user = await db.query.users.findFirst({
     where: eq(users.email, email),
     with: {
-      organization: true,
       organizationMemberships: true,
+      connectionPermissions: true,
     },
   });
+
+  if (!user) return null;
+
+  const org = await db.query.organizations.findFirst({
+    where: eq(organizations.id, user.organizationId),
+  });
+
+  if (!org) return null;
+
+  return {
+    ...user,
+    organization: org,
+    currentOrganization: org,
+  };
 }
 
 export async function updateUser(userId: string, updates: Partial<typeof users.$inferSelect>): Promise<UserWithOrganization> {

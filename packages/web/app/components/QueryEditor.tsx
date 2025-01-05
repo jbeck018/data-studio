@@ -30,7 +30,6 @@ export function QueryEditor({
         schema={schema}
         selectedTables={selectedTables}
         databaseAliases={databaseAliases}
-        height="200px"
       />
     </div>
   );

@@ -1,5 +1,6 @@
 import { startCase } from "lodash-es";
 import { cn } from "../utils/cn";
+import { Button } from "./ui/button";
 
 interface Tab {
   id: string;
@@ -32,7 +33,7 @@ export function TabView({ tabs, activeTab, onTabChange }: TabViewProps) {
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
-            <button
+            <Button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
@@ -43,7 +44,7 @@ export function TabView({ tabs, activeTab, onTabChange }: TabViewProps) {
               )}
             >
               {tab.label}
-            </button>
+            </Button>
           );
         })}
       </div>

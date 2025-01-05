@@ -1,11 +1,12 @@
 import { json, redirect } from "@remix-run/node";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { Form, useActionData, useLoaderData, Link } from "@remix-run/react";
-import { requireUser } from "../lib/auth/session.server";
-import { db } from "../lib/db/db.server";
-import { organizations, organizationMembers } from "../lib/db/schema";
+import { Form, Link, useActionData, useLoaderData } from "@remix-run/react";
 import { eq } from "drizzle-orm";
+import { Button } from "../components/ui/button";
+import { requireUser } from "../lib/auth/session.server";
 import { setCurrentOrganization } from "../lib/auth/session.server";
+import { db } from "../lib/db/db.server";
+import { organizationMembers, organizations } from "../lib/db/schema";
 
 interface LoaderData {
   organizations: Array<{
@@ -83,7 +84,7 @@ export default function SelectOrganization() {
           {organizations.map((org) => (
             <Form key={org.id} method="post" className="space-y-4">
               <input type="hidden" name="organizationId" value={org.id} />
-              <button
+              <Button
                 type="submit"
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-left hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
               >
@@ -110,7 +111,7 @@ export default function SelectOrganization() {
                     />
                   </svg>
                 </div>
-              </button>
+              </Button>
             </Form>
           ))}
 

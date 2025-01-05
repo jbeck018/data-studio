@@ -1,6 +1,7 @@
+import { Form, useSubmit } from '@remix-run/react';
 import { useState } from 'react';
 import type { QueryRestriction } from '../lib/db/schema/permissions';
-import { Form, useSubmit } from '@remix-run/react';
+import { Button } from './ui/button';
 
 interface User {
   id: string;
@@ -90,7 +91,7 @@ export function PermissionManager({ connectionId, users, currentPermissions }: P
                     </pre>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <button
+                    <Button
                       onClick={() => {
                         setSelectedUser(permission.userId);
                         setIsAdmin(permission.isAdmin);
@@ -100,7 +101,7 @@ export function PermissionManager({ connectionId, users, currentPermissions }: P
                       className="text-indigo-600 hover:text-indigo-900"
                     >
                       Edit
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -268,12 +269,12 @@ export function PermissionManager({ connectionId, users, currentPermissions }: P
         </div>
 
         <div className="flex justify-end">
-          <button
+          <Button
             type="submit"
             className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             {selectedUser ? 'Update Permission' : 'Add Permission'}
-          </button>
+          </Button>
         </div>
       </Form>
     </div>

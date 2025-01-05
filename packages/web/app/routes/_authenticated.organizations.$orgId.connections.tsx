@@ -1,15 +1,16 @@
-import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
+import { type ActionFunctionArgs, type LoaderFunctionArgs, json } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
+import { eq } from "drizzle-orm";
+import { useState } from "react";
+import { z } from "zod";
+import NewConnectionModal from "../components/NewConnectionModal";
+import { Button } from "../components/ui/button";
 import { requireUser } from "../lib/auth/session.server";
-import { getOrganizationRole } from "../lib/organizations/organizations.server";
+import { ConnectionManager } from "../lib/db/connection-manager.server";
 import { db } from "../lib/db/db.server";
 import { databaseConnections } from "../lib/db/schema";
-import { eq } from "drizzle-orm";
-import { ConnectionManager } from "../lib/db/connection-manager.server";
-import { z } from "zod";
-import { useState } from "react";
-import NewConnectionModal from "../components/NewConnectionModal";
 import { testPostgresConnection } from "../lib/db/test-connection.server";
+import { getOrganizationRole } from "../lib/organizations/organizations.server";
 
 const ConnectionSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -131,13 +132,13 @@ export default function ConnectionsPage() {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-semibold">Database Connections</h1>
           {canManage && (
-            <button
+            <Button
               type="button"
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
               onClick={() => setIsModalOpen(true)}
             >
               New Connection
-            </button>
+            </Button>
           )}
         </div>
 
@@ -159,17 +160,17 @@ export default function ConnectionsPage() {
                     <Form method="post">
                       <input type="hidden" name="intent" value="test" />
                       <input type="hidden" name="connectionId" value={connection.id} />
-                      <button
+                      <Button
                         type="submit"
                         className="text-blue-600 hover:text-blue-500"
                       >
                         Test Connection
-                      </button>
+                      </Button>
                     </Form>
                     <Form method="post">
                       <input type="hidden" name="intent" value="delete" />
                       <input type="hidden" name="connectionId" value={connection.id} />
-                      <button
+                      <Button
                         type="submit"
                         className="text-red-600 hover:text-red-500"
                         onClick={(e) => {
@@ -179,7 +180,7 @@ export default function ConnectionsPage() {
                         }}
                       >
                         Delete
-                      </button>
+                      </Button>
                     </Form>
                   </div>
                 )}
@@ -198,13 +199,13 @@ export default function ConnectionsPage() {
                 Add your first database connection to get started
               </p>
               {canManage && (
-                <button
+                <Button
                   type="button"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
                   onClick={() => setIsModalOpen(true)}
                 >
                   New Connection
-                </button>
+                </Button>
               )}
             </div>
           )}

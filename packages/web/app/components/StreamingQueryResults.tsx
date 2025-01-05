@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { QueryResult } from "~/types";
-import { DataGrid } from "./DataGrid";
+import { DataGrid, type Column } from "./DataGrid";
 
 interface StreamingQueryResultsProps {
   queryId: string;
@@ -59,7 +59,7 @@ export function StreamingQueryResults({ queryId, onError }: StreamingQueryResult
           </div>
           <DataGrid
             rows={rows}
-            columns={columns}
+            columns={columns as unknown as Column[]}
             pageSize={10}
             rowsPerPageOptions={[10, 25, 50, 100]}
             disableSelectionOnClick

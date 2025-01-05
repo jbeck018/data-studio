@@ -1,14 +1,15 @@
-import { json, redirect, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
+import { type ActionFunctionArgs, type LoaderFunctionArgs, json, redirect } from "@remix-run/node";
 import { Form, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { Button } from "../components/ui/button";
 import { requireUser } from "../lib/auth/session.server";
 import { 
-  ConnectionSchema, 
   type ConnectionInput,
+  ConnectionSchema, 
+  type DatabaseConnection,
+  deleteConnection, 
   getConnection, 
   testConnection, 
-  updateConnection, 
-  deleteConnection, 
-  type DatabaseConnection
+  updateConnection 
 } from "../lib/connections/config.server";
 import { DATABASE_TYPES } from "../lib/db/schema";
 
@@ -352,7 +353,7 @@ export default function EditConnectionPage() {
           )}
 
           <div className="flex justify-between">
-            <button
+            <Button
               type="submit"
               name="_action"
               value="test"
@@ -360,9 +361,9 @@ export default function EditConnectionPage() {
               className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               {isSubmitting ? "Testing..." : "Test Connection"}
-            </button>
+            </Button>
             <div className="space-x-4">
-              <button
+              <Button
                 type="submit"
                 name="_action"
                 value="save"
@@ -370,8 +371,8 @@ export default function EditConnectionPage() {
                 className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
                 {isSubmitting ? "Saving..." : "Save Changes"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 name="_action"
                 value="delete"
@@ -379,7 +380,7 @@ export default function EditConnectionPage() {
                 className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
               >
                 {isSubmitting ? "Deleting..." : "Delete"}
-              </button>
+              </Button>
             </div>
           </div>
         </Form>

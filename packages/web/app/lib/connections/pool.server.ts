@@ -1,78 +1,77 @@
-import { db } from "../../lib/db/db.server";
-import { databaseConnections } from "../db/schema/connections";
-import type { StandardConnectionConfig } from "../db/schema/connections";
-import type { ConnectionConfig, DatabaseConnection } from "~/types";
-import { Pool } from 'pg';
+import { Pool } from "pg";
+import { db } from "../db/db.server";
+import { databaseConnections } from "../db/schema";
+import { eq } from "drizzle-orm";
+import type { DatabaseConnection } from "../db/schema/connections";
 
-export type DatabaseConnectionType = "POSTGRES" | "MYSQL";
-
-export interface DatabaseConnectionData {
-  name: string;
-  type: DatabaseConnectionType;
+interface PoolConfig {
   host: string;
   port: number;
   database: string;
-  username: string;
+  user: string;
   password: string;
-  ssl: boolean;
-  organizationId: string;
-  createdById: string;
+  ssl?: boolean;
 }
 
 export class ConnectionPool {
-  private connections: Map<string, Pool>;
+  private pools: Map<string, Pool> = new Map();
 
-  constructor() {
-    this.connections = new Map();
-  }
-
-  async getConnection(connection: DatabaseConnection): Promise<Pool> {
-    if (this.connections.has(connection.id)) {
-      return this.connections.get(connection.id)!;
+  async getPool(connection: DatabaseConnection): Promise<Pool> {
+    if (this.pools.has(connection.id)) {
+      return this.pools.get(connection.id)!;
     }
 
-    const config: any = {
-      host: connection.host,
-      port: parseInt(connection.port),
-      database: connection.database,
-      user: connection.username,
-      password: connection.password,
-      ssl: connection.ssl === "true"
+    if (connection.type !== 'POSTGRES') {
+      throw new Error('Only PostgreSQL connections are supported');
+    }
+
+    const config: PoolConfig = {
+      host: connection.host || '',
+      port: connection.port ? parseInt(connection.port) : 5432,
+      database: connection.database || '',
+      user: connection.username || '',
+      password: connection.password || '',
+      ssl: connection.ssl || false,
     };
 
     const pool = new Pool(config);
-    this.connections.set(connection.id, pool);
+
+    // Test the connection
+    try {
+      const client = await pool.connect();
+      await client.release();
+    } catch (error) {
+      throw new Error(`Failed to connect to database: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    this.pools.set(connection.id, pool);
+
+    // Update last used timestamp
+    await db
+      .update(databaseConnections)
+      .set({ 
+        lastUsedAt: new Date(),
+      })
+      .where(eq(databaseConnections.id, connection.id));
+
     return pool;
   }
 
-  async releaseConnection(connectionId: string): Promise<void> {
-    const pool = this.connections.get(connectionId);
+  async releasePool(connectionId: string): Promise<void> {
+    const pool = this.pools.get(connectionId);
     if (pool) {
       await pool.end();
-      this.connections.delete(connectionId);
+      this.pools.delete(connectionId);
+    }
+  }
+
+  async releaseAllPools(): Promise<void> {
+    for (const [connectionId, pool] of this.pools.entries()) {
+      await pool.end();
+      this.pools.delete(connectionId);
     }
   }
 }
 
-export async function createDatabaseConnection(data: DatabaseConnectionData) {
-  // TODO: Add validation to check if connection works before saving
-  const [connection] = await db.insert(databaseConnections)
-    .values({
-      name: data.name,
-      type: data.type,
-      config: {
-        type: data.type,
-        host: data.host,
-        port: data.port,
-        database: data.database,
-        username: data.username,
-        password: data.password,
-        ssl: data.ssl
-      } satisfies StandardConnectionConfig,
-      organizationId: data.organizationId,
-      createdById: data.createdById,
-    })
-    .returning();
+export const connectionPool = new ConnectionPool();
 
-  return connection;
-}

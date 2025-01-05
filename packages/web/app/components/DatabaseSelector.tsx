@@ -1,59 +1,38 @@
-import { useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import type { DatabaseConnection } from "../lib/connections/config.server";
-import { Badge } from "./ui/badge";
+import { Form } from "@remix-run/react";
+import type { DatabaseConnection } from "~/lib/db/schema";
 
 interface DatabaseSelectorProps {
   connections: DatabaseConnection[];
-  selectedDatabases: string[];
-  onDatabaseSelect: (connectionId: string) => void;
-  onDatabaseDeselect: (connectionId: string) => void;
+  activeConnection: DatabaseConnection | null;
 }
 
-export function DatabaseSelector({
-  connections,
-  selectedDatabases,
-  onDatabaseSelect,
-  onDatabaseDeselect,
-}: DatabaseSelectorProps) {
-  const [connectionStatuses, setConnectionStatuses] = useState<Record<string, string>>({});
-
-  const handleConnectionToggle = (connectionId: string) => {
-    if (selectedDatabases.includes(connectionId)) {
-      onDatabaseDeselect(connectionId);
-    } else {
-      onDatabaseSelect(connectionId);
-    }
-  };
+export function ConnectionSelector({ connections, activeConnection }: DatabaseSelectorProps) {
+  if (connections.length === 0) {
+    return (
+      <div className="flex items-center px-3 py-2 text-sm text-gray-500">
+        No connections available
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium">Select Databases</label>
-      <div className="flex flex-wrap gap-2">
-        {connections.map((conn) => (
-          <button
-            key={conn.id}
-            onClick={() => handleConnectionToggle(conn.id)}
-            className={`
-              inline-flex items-center px-3 py-1 rounded-md text-sm
-              ${
-                selectedDatabases.includes(conn.id)
-                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                  : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
-              }
-              hover:opacity-80 transition-opacity
-            `}
-          >
-            {conn.name}
-            <Badge
-              variant={selectedDatabases.includes(conn.id) ? "default" : "secondary"}
-              className="ml-2"
-            >
-              {selectedDatabases.includes(conn.id) ? "Selected" : "Click to select"}
-            </Badge>
-          </button>
+    <Form method="post" action="/connections/change" className="flex items-center">
+      <select
+        name="connectionId"
+        defaultValue={activeConnection?.id || ""}
+        onChange={(e) => e.target.form?.submit()}
+        className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+      >
+        <option value="" disabled>
+          Select a connection
+        </option>
+        {connections.map((connection) => (
+          <option key={connection.id} value={connection.id}>
+            {connection.name}
+          </option>
         ))}
-      </div>
-    </div>
+      </select>
+    </Form>
   );
 }
+

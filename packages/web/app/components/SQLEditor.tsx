@@ -1,13 +1,14 @@
+import { CompletionContext, CompletionResult, autocompletion } from '@codemirror/autocomplete';
 import { sql } from '@codemirror/lang-sql';
+import { Diagnostic, lintGutter, linter } from '@codemirror/lint';
+import { Compartment, Extension, StateEffect } from '@codemirror/state';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { useTheme } from '../hooks/useTheme';
 import { EditorView, ViewUpdate } from '@codemirror/view';
-import { Extension, Compartment, StateEffect } from '@codemirror/state';
-import { useCallback, useEffect, useRef, useMemo, useState } from 'react';
 import { basicSetup } from 'codemirror';
-import { linter, lintGutter, Diagnostic } from '@codemirror/lint';
-import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTheme } from '../hooks/useTheme';
 import type { TableSchema } from '../types';
+import { Button } from './ui/button';
 
 interface SQLEditorProps {
   defaultValue?: string;
@@ -17,6 +18,7 @@ interface SQLEditorProps {
   selectedTables?: Set<string>;
   databaseAliases?: { alias: string; connectionId: string }[];
   isExecuting?: boolean;
+  value?: string;
 }
 
 // SQL Keywords for auto-completion
@@ -185,14 +187,15 @@ export function SQLEditor({
   selectedTables,
   databaseAliases,
   isExecuting = false,
+  value: _value,
 }: SQLEditorProps) {
   const { isDark } = useTheme();
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView>();
   const sqlLinter = useMemo(() => createSQLLinter(), []);
   const isInternalChange = useRef(false);
-  const [value, setValue] = useState(defaultValue);
-  
+  const [value, setValue] = useState(_value || defaultValue);
+
   // Create compartments for dynamic configuration
   const themeCompartment = useMemo(() => new Compartment(), []);
   const lintCompartment = useMemo(() => new Compartment(), []);
@@ -299,13 +302,13 @@ export function SQLEditor({
             Press {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"} + Enter to
             execute
           </div>
-          <button
+          <Button
             onClick={handleExecute}
             disabled={isExecuting || !value.trim()}
             className="flex items-center gap-2"
           >
             {isExecuting ? "Executing..." : "Execute"}
-          </button>
+          </Button>
         </div>
         <div 
           ref={editorRef} 

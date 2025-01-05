@@ -1,63 +1,70 @@
-import { useEffect, useState } from 'react';
-import { DatabaseConnection } from '../lib/db/schema';
+import { useEffect, useState } from "react";
+import type { DatabaseConnection } from "~/lib/db/schema";
 
 interface ConnectionStatusProps {
-  connection: DatabaseConnection | null;
+  connection: DatabaseConnection;
 }
 
 export function ConnectionStatus({ connection }: ConnectionStatusProps) {
   const [status, setStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
-  const [lastChecked, setLastChecked] = useState<Date>(new Date());
+  const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
-    if (!connection) {
-      setStatus('disconnected');
-      return;
-    }
+    let mounted = true;
 
-    // Ping the connection every 30 seconds
-    const checkConnection = async () => {
+    async function checkStatus() {
+      if (!mounted || isChecking) return;
+      
+      setIsChecking(true);
       try {
         const response = await fetch(`/api/connections/${connection.id}/status`);
-        if (response.ok) {
-          setStatus('connected');
-        } else {
-          setStatus('error');
+        const data = await response.json();
+        if (mounted) {
+          setStatus(data.status);
         }
       } catch (error) {
-        setStatus('error');
+        if (mounted) {
+          setStatus('error');
+        }
+      } finally {
+        if (mounted) {
+          setIsChecking(false);
+        }
       }
-      setLastChecked(new Date());
+    }
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 30000); // Check every 30 seconds
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
     };
+  }, [connection.id, isChecking]);
 
-    checkConnection();
-    const interval = setInterval(checkConnection, 30000);
+  const statusColors = {
+    connected: 'bg-green-100 text-green-800',
+    disconnected: 'bg-gray-100 text-gray-800',
+    error: 'bg-red-100 text-red-800',
+  };
 
-    return () => clearInterval(interval);
-  }, [connection]);
-
-  if (!connection) {
-    return null;
-  }
+  const statusText = {
+    connected: 'Connected',
+    disconnected: 'Disconnected',
+    error: 'Error',
+  };
 
   return (
-    <div className="flex items-center space-x-2">
-      <div
-        className={`h-2 w-2 rounded-full ${
-          status === 'connected'
-            ? 'bg-green-500'
-            : status === 'error'
-            ? 'bg-red-500'
-            : 'bg-gray-500'
-        }`}
-      />
-      <span className="text-sm text-gray-500">
-        {status === 'connected'
-          ? 'Connected'
-          : status === 'error'
-          ? 'Connection Error'
-          : 'Disconnected'}
-      </span>
-    </div>
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+        statusColors[status]
+      }`}
+    >
+      <span className={`h-2 w-2 rounded-full mr-1.5 ${
+        status === 'connected' ? 'bg-green-400' :
+        status === 'error' ? 'bg-red-400' : 'bg-gray-400'
+      }`} />
+      {statusText[status]}
+    </span>
   );
 }

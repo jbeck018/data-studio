@@ -1,21 +1,38 @@
-import { Pool } from "pg";
-import { MongoClient } from "mongodb";
-import { createClient } from "@redis/client";
-import { Database } from "sqlite3";
-import { createPool, FieldPacket } from "mysql2/promise";
+import type { Pool, PoolClient } from "pg";
+import type { MongoClient } from "mongodb";
+import type { RedisClientType } from "@redis/client";
+import type { Database } from "sqlite3";
+import type { FieldPacket } from "mysql2/promise";
+import { createPool } from "mysql2/promise";
 import type {
+  DatabaseConnection,
   ConnectionConfig,
-  DatabaseClient,
+  ConnectionType
+} from "../schema/connections";
+import type {
   QueryResult,
-} from "~/types";
+  QueryMetrics,
+  QueryField,
+  DatabaseClient,
+  QueryParams,
+  DatabaseValue
+} from "../../types";
 
 interface ConnectionPool {
   [key: string]: DatabaseClient;
 }
 
+interface ConnectionStats {
+  isConnected: boolean;
+  activeQueries: number;
+  lastUsed?: Date;
+  error?: string;
+}
+
 export class ConnectionManager {
   private static instance: ConnectionManager;
   private connections: ConnectionPool = {};
+  private stats: Map<string, ConnectionStats> = new Map();
 
   private constructor() {}
 
@@ -34,138 +51,188 @@ export class ConnectionManager {
     return connection;
   }
 
+  public async getConnectionStats(connectionId: string): Promise<ConnectionStats> {
+    const stats = this.stats.get(connectionId) || {
+      isConnected: false,
+      activeQueries: 0
+    };
+    return stats;
+  }
+
   public async createConnection(
     connectionId: string,
     config: ConnectionConfig
   ): Promise<DatabaseClient> {
     if (this.connections[connectionId]) {
-      return this.connections[connectionId];
+      throw new Error(`Connection with ID ${connectionId} already exists`);
     }
 
     let client: DatabaseClient;
 
-    switch (config.type) {
-      case "POSTGRES":
-        client = await this.createPostgresConnection(config);
-        break;
-      case "MYSQL":
-        client = await this.createMySQLConnection(config);
-        break;
-      case "SQLITE":
-        client = await this.createSQLiteConnection(config);
-        break;
-      case "MONGODB":
-        client = await this.createMongoDBConnection(config);
-        break;
-      case "REDIS":
-        client = await this.createRedisConnection(config);
-        break;
-      default:
-        throw new Error(`Unsupported database type: ${config.type}`);
-    }
+    try {
+      switch (config.type) {
+        case "POSTGRES":
+          client = await this.createPostgresConnection(config);
+          break;
+        case "MYSQL":
+          client = await this.createMySQLConnection(config);
+          break;
+        case "SQLITE":
+          client = await this.createSQLiteConnection(config);
+          break;
+        case "MONGODB":
+          client = await this.createMongoDBConnection(config);
+          break;
+        case "REDIS":
+          client = await this.createRedisConnection(config);
+          break;
+        default:
+          throw new Error(`Unsupported database type: ${config.type}`);
+      }
 
-    this.connections[connectionId] = client;
-    return client;
+      this.connections[connectionId] = client;
+      this.stats.set(connectionId, {
+        isConnected: true,
+        activeQueries: 0,
+        lastUsed: new Date()
+      });
+
+      return client;
+    } catch (error) {
+      this.stats.set(connectionId, {
+        isConnected: false,
+        activeQueries: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw error;
+    }
   }
 
-  public async closeConnection(connectionId: string): Promise<void> {
+  public async resetConnection(connectionId: string): Promise<void> {
     const connection = this.connections[connectionId];
     if (connection) {
       await connection.close();
       delete this.connections[connectionId];
+      this.stats.delete(connectionId);
     }
   }
 
-  private async createPostgresConnection(
-    config: ConnectionConfig
-  ): Promise<DatabaseClient> {
-    if (!config.host || !config.port || !config.database) {
-      throw new Error("Host, port, and database are required for PostgreSQL connections");
+  public async closeConnection(connectionId: string): Promise<void> {
+    await this.resetConnection(connectionId);
+  }
+
+  public async validateAndExecuteQuery(
+    connectionId: string,
+    sql: string,
+    params?: QueryParams[]
+  ): Promise<QueryResult> {
+    const connection = await this.getConnection(connectionId);
+    const stats = this.stats.get(connectionId);
+    if (stats) {
+      stats.activeQueries++;
+      stats.lastUsed = new Date();
     }
 
+    try {
+      return await connection.query(sql, params);
+    } finally {
+      if (stats) {
+        stats.activeQueries--;
+      }
+    }
+  }
+
+  private async createPostgresConnection(config: ConnectionConfig): Promise<DatabaseClient> {
+    const { Pool } = await import("pg");
     const pool = new Pool({
-      host: config.host,
-      port: parseInt(config.port),
-      user: config.username,
-      password: config.password,
-      database: config.database,
-      ssl: config.ssl ? { rejectUnauthorized: false } : undefined,
+      host: config.host || "localhost",
+      port: config.port ? Number.parseInt(config.port) : 5432,
+      database: config.database || undefined,
+      user: config.username || undefined,
+      password: config.password || undefined,
+      ssl: config.ssl ? { rejectUnauthorized: false } : undefined
     });
 
     return {
-      query: async (sql: string, params?: any[]): Promise<QueryResult> => {
-        const start = Date.now();
-        const result = await pool.query(sql, params);
-        const executionTime = Date.now() - start;
+      query: async (sql: string, params?: QueryParams[]): Promise<QueryResult> => {
+        const client = await pool.connect();
+        try {
+          const startTime = Date.now();
+          const result = await client.query(sql, params);
+          const endTime = Date.now();
 
-        return {
-          fields: result.fields.map((field) => ({
+          const fields: QueryField[] = result.fields.map(field => ({
             name: field.name,
             type: field.dataTypeID.toString(),
-            dataType: field.dataTypeID.toString(),
-          })),
-          rows: result.rows as Record<string, any>[],
-          rowCount: result.rowCount || 0,
-          metrics: {
-            executionTimeMs: executionTime,
-            bytesProcessed: 0,
-            rowsAffected: result.rowCount || 0,
-          },
-        };
+            dataType: field.format
+          }));
+
+          const metrics: QueryMetrics = {
+            executionTimeMs: endTime - startTime,
+            bytesProcessed: 0, // Not available in pg
+            rowsAffected: result.rowCount || 0
+          };
+
+          return {
+            fields,
+            rows: result.rows,
+            rowCount: result.rowCount || 0,
+            metrics,
+            executionTime: endTime - startTime
+          };
+        } finally {
+          client.release();
+        }
       },
       close: async () => {
         await pool.end();
       },
       testConnection: async () => {
         try {
-          await pool.query("SELECT 1");
+          const client = await pool.connect();
+          client.release();
           return true;
         } catch (error) {
           return false;
         }
-      },
+      }
     };
   }
 
-  private async createMySQLConnection(
-    config: ConnectionConfig
-  ): Promise<DatabaseClient> {
-    if (!config.host || !config.port || !config.database) {
-      throw new Error("Host, port, and database are required for MySQL connections");
-    }
-
-    const pool = await createPool({
-      host: config.host,
-      port: parseInt(config.port),
-      user: config.username,
-      password: config.password,
-      database: config.database,
-      ssl: config.ssl ? { rejectUnauthorized: false } : undefined,
+  private async createMySQLConnection(config: ConnectionConfig): Promise<DatabaseClient> {
+    const pool = createPool({
+      host: config.host || "localhost",
+      port: config.port ? Number.parseInt(config.port) : 3306,
+      database: config.database || undefined,
+      user: config.username || undefined,
+      password: config.password || undefined,
+      ssl: config.ssl ? {} : undefined
     });
 
     return {
-      query: async (sql: string, params?: any[]): Promise<QueryResult> => {
-        const start = Date.now();
+      query: async (sql: string, params?: QueryParams[]): Promise<QueryResult> => {
+        const startTime = Date.now();
         const [rows, fields] = await pool.query(sql, params);
-        const executionTime = Date.now() - start;
+        const endTime = Date.now();
 
-        const resultRows = Array.isArray(rows) 
-          ? rows as Record<string, any>[]
-          : [rows as Record<string, any>];
+        const queryFields: QueryField[] = (fields as FieldPacket[]).map(field => ({
+          name: field.name,
+          type: field.type.toString(),
+          dataType: field.type.toString()
+        }));
+
+        const metrics: QueryMetrics = {
+          executionTimeMs: endTime - startTime,
+          bytesProcessed: 0, // Not available in MySQL
+          rowsAffected: Array.isArray(rows) ? rows.length : 0
+        };
 
         return {
-          fields: (fields as FieldPacket[]).map((field) => ({
-            name: field.name,
-            type: (field.type || 'string').toString(),
-            dataType: field.type?.toString() || 'string',
-          })),
-          rows: resultRows,
-          rowCount: resultRows.length,
-          metrics: {
-            executionTimeMs: executionTime,
-            bytesProcessed: 0,
-            rowsAffected: resultRows.length,
-          },
+          fields: queryFields,
+          rows: Array.isArray(rows) ? rows : [rows],
+          rowCount: Array.isArray(rows) ? rows.length : 1,
+          metrics,
+          executionTime: endTime - startTime
         };
       },
       close: async () => {
@@ -173,52 +240,49 @@ export class ConnectionManager {
       },
       testConnection: async () => {
         try {
-          await pool.query("SELECT 1");
+          await pool.getConnection();
           return true;
         } catch (error) {
           return false;
         }
-      },
+      }
     };
   }
 
-  private async createSQLiteConnection(
-    config: ConnectionConfig
-  ): Promise<DatabaseClient> {
-    if (!config.database) {
-      throw new Error("Database path is required for SQLite connections");
-    }
-
-    const db = new Database(config.database);
+  private async createSQLiteConnection(config: ConnectionConfig): Promise<DatabaseClient> {
+    const { Database } = await import("sqlite3");
+    const db = new Database(config.filepath || ":memory:");
 
     return {
-      query: (sql: string, params?: any[]): Promise<QueryResult> => {
+      query: async (sql: string, params?: QueryParams[]): Promise<QueryResult> => {
         return new Promise((resolve, reject) => {
-          const start = Date.now();
+          const startTime = Date.now();
           db.all(sql, params, (error, rows) => {
             if (error) {
               reject(error);
               return;
             }
 
-            const executionTime = Date.now() - start;
-            const result: QueryResult = {
-              fields: [],
-              rows: (rows || []) as Record<string, any>[],
-              rowCount: rows ? rows.length : 0,
-              metrics: {
-                executionTimeMs: executionTime,
-                bytesProcessed: 0,
-                rowsAffected: rows ? rows.length : 0,
-              },
+            const endTime = Date.now();
+            const metrics: QueryMetrics = {
+              executionTimeMs: endTime - startTime,
+              bytesProcessed: 0, // Not available in SQLite
+              rowsAffected: rows?.length || 0
             };
-            resolve(result);
+
+            resolve({
+              fields: [], // SQLite doesn't provide field metadata
+              rows: rows || [],
+              rowCount: rows?.length || 0,
+              metrics,
+              executionTime: endTime - startTime
+            });
           });
         });
       },
       close: async () => {
-        return new Promise<void>((resolve, reject) => {
-          db.close((error) => {
+        return new Promise((resolve, reject) => {
+          db.close(error => {
             if (error) {
               reject(error);
             } else {
@@ -229,105 +293,49 @@ export class ConnectionManager {
       },
       testConnection: async () => {
         try {
-          await new Promise<void>((resolve, reject) => {
-            db.get("SELECT 1", (error) => {
-              if (error) {
-                reject(error);
-              } else {
-                resolve();
-              }
-            });
-          });
+          await this.query("SELECT 1");
           return true;
         } catch (error) {
           return false;
         }
-      },
+      }
     };
   }
 
-  private async createMongoDBConnection(
-    config: ConnectionConfig
-  ): Promise<DatabaseClient> {
-    if (!config.host || !config.port || !config.database) {
-      throw new Error("Host, port, and database are required for MongoDB connections");
-    }
-
-    const client = await MongoClient.connect(
-      `mongodb://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}`
-    );
+  private async createMongoDBConnection(config: ConnectionConfig): Promise<DatabaseClient> {
+    const { MongoClient } = await import("mongodb");
+    const url = `mongodb://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}`;
+    const client = await MongoClient.connect(url);
 
     return {
       query: async (sql: string): Promise<QueryResult> => {
-        const start = Date.now();
-        const db = client.db(config.database);
-        const collection = db.collection("test"); // This should be parameterized
-        const result = await collection.find({}).toArray();
-        const executionTime = Date.now() - start;
-
-        return {
-          fields: [], // MongoDB doesn't have fixed schema
-          rows: result.map((row) => ({ ...row, _id: row._id.toString() })) as Record<string, any>[],
-          rowCount: result.length,
-          metrics: {
-            executionTimeMs: executionTime,
-            bytesProcessed: 0,
-            rowsAffected: result.length,
-          },
-        };
+        throw new Error("MongoDB query not implemented");
       },
       close: async () => {
         await client.close();
       },
       testConnection: async () => {
         try {
-          await client.db("admin").command({ ping: 1 });
+          await client.db().command({ ping: 1 });
           return true;
         } catch (error) {
           return false;
         }
-      },
+      }
     };
   }
 
-  private async createRedisConnection(
-    config: ConnectionConfig
-  ): Promise<DatabaseClient> {
-    if (!config.host || !config.port) {
-      throw new Error("Host and port are required for Redis connections");
-    }
-
+  private async createRedisConnection(config: ConnectionConfig): Promise<DatabaseClient> {
+    const { createClient } = await import("redis");
     const client = createClient({
-      url: `redis://${config.username}:${config.password}@${config.host}:${config.port}`,
+      url: `redis://${config.username}:${config.password}@${config.host}:${config.port}`
     });
 
     await client.connect();
 
     return {
-      query: async (command: string): Promise<QueryResult> => {
-        const start = Date.now();
-        const [cmd, ...args] = command.split(" ");
-        const result = await client.sendCommand([cmd, ...args]);
-        const executionTime = Date.now() - start;
-
-        const rows = Array.isArray(result)
-          ? result.map((item) => ({ value: String(item) }))
-          : [{ value: String(result) }];
-
-        return {
-          fields: [{
-            name: "value",
-            type: "string",
-            dataType: "string",
-          }],
-          rows: rows as Record<string, any>[],
-          rowCount: rows.length,
-          metrics: {
-            executionTimeMs: executionTime,
-            bytesProcessed: 0,
-            rowsAffected: rows.length,
-          },
-        };
+      query: async (sql: string): Promise<QueryResult> => {
+        throw new Error("Redis query not implemented");
       },
       close: async () => {
         await client.quit();
@@ -339,7 +347,7 @@ export class ConnectionManager {
         } catch (error) {
           return false;
         }
-      },
+      }
     };
   }
 }

@@ -1,6 +1,7 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { Form } from "@remix-run/react";
 import { Fragment } from "react";
+import { Button } from "./ui/button";
 
 interface NewConnectionModalProps {
   isOpen: boolean;
@@ -134,19 +135,19 @@ export default function NewConnectionModal({ isOpen, onClose }: NewConnectionMod
                   </div>
 
                   <div className="flex justify-end space-x-4 mt-6">
-                    <button
+                    <Button
                       type="button"
                       className="px-4 py-2 text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-tertiary dark:hover:bg-dark-bg-tertiary rounded-lg transition-colors"
                       onClick={onClose}
                     >
                       Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="submit"
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
                     >
                       Create Connection
-                    </button>
+                    </Button>
                   </div>
                 </Form>
               </Dialog.Panel>

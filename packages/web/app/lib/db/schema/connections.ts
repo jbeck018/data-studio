@@ -1,83 +1,102 @@
-import { pgTable, text, boolean } from "drizzle-orm/pg-core";
-import { organizations } from "./organizations";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
-import { relations } from "drizzle-orm";
-import type { InferModel } from "drizzle-orm";
+import { pgTable, text, timestamp, uuid, boolean, jsonb } from 'drizzle-orm/pg-core';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { z } from 'zod';
+import { organizations } from './auth';
 
-export const databaseConnections = pgTable('connections', {
-  id: text('id').primaryKey(),
+// Connection type enum
+export const ConnectionType = z.enum(['POSTGRES', 'MYSQL', 'SQLITE', 'MSSQL', 'ORACLE', 'MONGODB', 'REDIS']);
+export type ConnectionType = z.infer<typeof ConnectionType>;
+
+// Connection config schema
+export const ConnectionConfigSchema = z.object({
+  type: ConnectionType,
+  name: z.string(),
+  host: z.string().nullable(),
+  port: z.string().nullable(),
+  database: z.string().nullable(),
+  username: z.string().nullable(),
+  password: z.string().nullable(),
+  ssl: z.boolean().nullable(),
+  filepath: z.string().nullable()
+});
+
+export type ConnectionConfig = z.infer<typeof ConnectionConfigSchema>;
+
+// Tables
+export const databaseConnections = pgTable('database_connections', {
+  id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   type: text('type', { enum: ['POSTGRES', 'MYSQL', 'SQLITE', 'MSSQL', 'ORACLE', 'MONGODB', 'REDIS'] }).notNull(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id),
   host: text('host'),
   port: text('port'),
   database: text('database'),
   username: text('username'),
   password: text('password'),
-  ssl: boolean('ssl').default(false),
+  ssl: boolean('ssl'),
   filepath: text('filepath'),
-  authSource: text('auth_source'),
-  replicaSet: text('replica_set'),
-  organizationId: text('organization_id').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  lastUsedAt: timestamp('last_used_at')
 });
 
-export const databaseConnectionsRelations = relations(databaseConnections, ({ one }) => ({
-  organization: one(organizations, {
-    fields: [databaseConnections.organizationId],
-    references: [organizations.id],
-  }),
-}));
+export const connectionPermissions = pgTable('connection_permissions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  connectionId: uuid('connection_id').notNull().references(() => databaseConnections.id),
+  userId: uuid('user_id').notNull(),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+  isAdmin: boolean('is_admin').notNull().default(false),
+  canConnect: boolean('can_connect').notNull().default(false),
+  canRead: boolean('can_read').notNull().default(false),
+  canWrite: boolean('can_write').notNull().default(false),
+  canDelete: boolean('can_delete').notNull().default(false),
+  canGrant: boolean('can_grant').notNull().default(false),
+  queryRestrictions: jsonb('query_restrictions'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+});
 
 // Zod schemas for validation
-export const insertDatabaseConnectionSchema = createInsertSchema(databaseConnections, {
-  type: z.enum(["POSTGRES", "MYSQL", "SQLITE", "MSSQL", "ORACLE", "MONGODB", "REDIS"]),
-});
+export const insertConnectionSchema = createInsertSchema(databaseConnections);
+export const selectConnectionSchema = createSelectSchema(databaseConnections);
 
-export const selectDatabaseConnectionSchema = createSelectSchema(databaseConnections);
+export const insertConnectionPermissionSchema = createInsertSchema(connectionPermissions);
+export const selectConnectionPermissionSchema = createSelectSchema(connectionPermissions);
 
-export type DatabaseConnection = InferModel<typeof databaseConnections>;
-export type NewDatabaseConnection = InferModel<typeof databaseConnections, "insert">;
-export type ConnectionType = DatabaseConnection['type'];
+// Types
+export type DatabaseConnection = typeof databaseConnections.$inferSelect;
+export type NewDatabaseConnection = typeof databaseConnections.$inferInsert;
+export type ConnectionPermission = typeof connectionPermissions.$inferSelect;
+export type NewConnectionPermission = typeof connectionPermissions.$inferInsert;
 
-// Connection config types
-export interface ConnectionConfig {
-  host: string;
-  port: string;
-  username: string;
-  password: string;
-  database: string;
-  ssl?: boolean;
-}
+// Relations
+export const databaseConnectionsRelations = {
+  organization: {
+    type: 'one',
+    schema: organizations,
+    fields: [databaseConnections.organizationId],
+    references: [organizations.id]
+  },
+  permissions: {
+    type: 'many',
+    schema: connectionPermissions,
+    fields: [databaseConnections.id],
+    references: [connectionPermissions.connectionId]
+  }
+};
 
-export interface StandardConnectionConfig extends ConnectionConfig {
-  type: ConnectionType;
-  name: string;
-}
+export const connectionPermissionsRelations = {
+  connection: {
+    type: 'one',
+    schema: databaseConnections,
+    fields: [connectionPermissions.connectionId],
+    references: [databaseConnections.id]
+  },
+  organization: {
+    type: 'one',
+    schema: organizations,
+    fields: [connectionPermissions.organizationId],
+    references: [organizations.id]
+  }
+};
 
-export interface PostgresConnectionConfig extends StandardConnectionConfig {
-  type: "POSTGRES";
-}
-
-export interface MySQLConnectionConfig extends StandardConnectionConfig {
-  type: "MYSQL";
-}
-
-export interface SQLiteConnectionConfig extends StandardConnectionConfig {
-  type: "SQLITE";
-}
-
-export interface MSSQLConnectionConfig extends StandardConnectionConfig {
-  type: "MSSQL";
-}
-
-export interface OracleConnectionConfig extends StandardConnectionConfig {
-  type: "ORACLE";
-}
-
-export interface MongoDBConnectionConfig extends StandardConnectionConfig {
-  type: "MONGODB";
-}
-
-export interface RedisConnectionConfig extends StandardConnectionConfig {
-  type: "REDIS";
-}

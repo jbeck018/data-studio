@@ -1,4 +1,5 @@
-import { type ChartType, type ChartData } from './ChartComponent';
+import { Button } from '../ui/button';
+import { type ChartData, type ChartType } from './ChartComponent';
 
 interface ChartCustomizerProps {
   chartData: ChartData;
@@ -36,12 +37,12 @@ export function ChartCustomizer({ chartData, onUpdate }: ChartCustomizerProps) {
   return (
     <div className="space-y-4 p-4 bg-light-bg-secondary dark:bg-dark-bg-secondary rounded-lg">
       <div>
-        <label className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-1">
+        <p className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-1">
           Chart Type
-        </label>
+        </p>
         <div className="flex flex-wrap gap-2">
           {CHART_TYPE_OPTIONS.map(option => (
-            <button
+            <Button
               key={option.value}
               onClick={() => handleChartTypeChange(option.value)}
               className={`px-3 py-1 rounded-md text-sm ${
@@ -51,16 +52,17 @@ export function ChartCustomizer({ chartData, onUpdate }: ChartCustomizerProps) {
               }`}
             >
               {option.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-1">
+        <label htmlFor="title" className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-1">
           Title
         </label>
         <input
+          id="title"
           type="text"
           value={title || ''}
           onChange={e => handleTitleChange(e.target.value)}
@@ -70,7 +72,7 @@ export function ChartCustomizer({ chartData, onUpdate }: ChartCustomizerProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-1">
+        <label htmlFor="colors" className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary mb-1">
           Colors
         </label>
         <div className="flex flex-wrap gap-2">

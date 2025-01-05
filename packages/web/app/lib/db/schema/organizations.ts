@@ -1,69 +1,53 @@
-import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
-import { users } from "./auth";
+import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { users } from './auth';
 
-export enum OrganizationRole {
-  OWNER = "owner",
-  ADMIN = "admin",
-  MEMBER = "member",
-  VIEWER = "viewer",
-}
-
-export const organizations = pgTable("organizations", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+export const organizations = pgTable('organizations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  description: text('description'),
+  createdById: uuid('created_by_id').references(() => users.id),
 });
 
-export const organizationMemberships = pgTable("organization_memberships", {
-  id: uuid("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organizations.id),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id),
-  role: text("role", { enum: ["OWNER", "ADMIN", "MEMBER", "VIEWER"] }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+export const organizationMemberships = pgTable('organization_memberships', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id').references(() => organizations.id).notNull(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  role: text('role').notNull().default('MEMBER'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 export const organizationsRelations = relations(organizations, ({ many }) => ({
-  users: many(users),
   members: many(organizationMemberships),
 }));
 
-export const organizationMembershipsRelations = relations(
-  organizationMemberships,
-  ({ one }) => ({
-    organization: one(organizations, {
-      fields: [organizationMemberships.organizationId],
-      references: [organizations.id],
-    }),
-    user: one(users, {
-      fields: [organizationMemberships.userId],
-      references: [users.id],
-    }),
-  })
-);
-
-// Zod schemas for validation
-export const insertOrganizationSchema = createInsertSchema(organizations);
-export const selectOrganizationSchema = createSelectSchema(organizations);
-
-export const insertOrganizationMembershipSchema = createInsertSchema(organizationMemberships, {
-  role: z.enum(["OWNER", "ADMIN", "MEMBER", "VIEWER"]),
-});
-export const selectOrganizationMembershipSchema = createSelectSchema(organizationMemberships, {
-  role: z.enum(["OWNER", "ADMIN", "MEMBER", "VIEWER"]),
-});
+export const organizationMembershipsRelations = relations(organizationMemberships, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationMemberships.organizationId],
+    references: [organizations.id],
+  }),
+  user: one(users, {
+    fields: [organizationMemberships.userId],
+    references: [users.id],
+  }),
+}));
 
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type NewOrganization = typeof organizations.$inferInsert;
+export type OrganizationMembership = typeof organizationMemberships.$inferSelect;
+export type NewOrganizationMembership = typeof organizationMemberships.$inferInsert;
 
-export type OrganizationMembership = z.infer<typeof selectOrganizationMembershipSchema>;
-export type NewOrganizationMembership = z.infer<typeof insertOrganizationMembershipSchema>;
+export type OrganizationWithMembers = Organization & {
+  members: (OrganizationMembership & {
+    user: typeof users.$inferSelect;
+  })[];
+};
+
+export type OrganizationWithRole = Organization & {
+  role: Role;
+};
+

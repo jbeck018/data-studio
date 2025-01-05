@@ -1,71 +1,106 @@
 import { db } from "~/lib/db/db.server";
-import { users, organizations, organizationMemberships } from "~/lib/db/schema/auth";
-import { eq, and } from "drizzle-orm";
-import type { UserWithOrganization } from "~/types";
-import type { Role } from "~/lib/db/schema/auth";
+import { eq } from "drizzle-orm";
+import { users, organizations, organizationMemberships } from "~/lib/db/schema";
+import type { Role, UserWithOrganization } from "~/lib/db/schema/types";
+import { ROLE_LEVELS } from "~/lib/db/schema/types";
 
-const ROLE_LEVELS = {
-  OWNER: 3,
-  ADMIN: 2,
-  MEMBER: 1,
-  VIEWER: 0,
-} as const;
+export async function getUserRole(userId: string, organizationId: string): Promise<Role | null> {
+  const membership = await db.query.organizationMemberships.findFirst({
+    where: (memberships) => 
+      eq(memberships.userId, userId) && 
+      eq(memberships.organizationId, organizationId),
+  });
 
-type Role = keyof typeof ROLE_LEVELS;
+  return membership?.role as Role || null;
+}
 
-export function hasPermission(user: UserWithOrganization, requiredRole: Role): boolean {
-  const membership = user.organizationMemberships[0];
+export async function hasRole(user: UserWithOrganization, requiredRole: Role, organizationId: string): Promise<boolean> {
+  const membership = user.organizationMemberships?.find(
+    (m) => m.organizationId === organizationId
+  );
+
   if (!membership) return false;
 
-  const userRoleLevel = ROLE_LEVELS[membership.role as keyof typeof ROLE_LEVELS];
-  const requiredRoleLevel = ROLE_LEVELS[requiredRole as keyof typeof ROLE_LEVELS];
+  const userRoleLevel = ROLE_LEVELS[membership.role as Role];
+  const requiredRoleLevel = ROLE_LEVELS[requiredRole];
 
   return userRoleLevel >= requiredRoleLevel;
 }
 
-export async function getUsersInOrganization(organizationId: string): Promise<UserWithOrganization[]> {
-  const usersWithOrg = await db.query.users.findMany({
-    where: eq(users.organizationId, organizationId),
+export async function getUsersInOrganization(organizationId: string) {
+  const members = await db.query.users.findMany({
+    where: (users) => eq(users.organizationId, organizationId),
     with: {
-      organization: true,
       organizationMemberships: true,
+      connectionPermissions: true,
     },
   });
 
-  return usersWithOrg as UserWithOrganization[];
+  const org = await db.query.organizations.findFirst({
+    where: eq(organizations.id, organizationId),
+  });
+
+  if (!org) return [];
+
+  return members.map(member => ({
+    ...member,
+    organization: org,
+    currentOrganization: org,
+  }));
 }
 
-export async function updateUserRole(userId: string, organizationId: string, role: Role) {
-  await db
+export async function addUserToOrganization(
+  userId: string,
+  organizationId: string,
+  role: Role = "MEMBER"
+) {
+  const existingMembership = await db.query.organizationMemberships.findFirst({
+    where: (memberships) =>
+      eq(memberships.userId, userId) &&
+      eq(memberships.organizationId, organizationId),
+  });
+
+  if (existingMembership) {
+    return existingMembership;
+  }
+
+  const [membership] = await db
+    .insert(organizationMemberships)
+    .values({
+      userId,
+      organizationId,
+      role,
+    })
+    .returning();
+
+  return membership;
+}
+
+export async function updateUserRole(
+  userId: string,
+  organizationId: string,
+  newRole: Role
+) {
+  const [membership] = await db
     .update(organizationMemberships)
-    .set({ role })
+    .set({ role: newRole })
     .where(
-      and(
-        eq(organizationMemberships.userId, userId),
-        eq(organizationMemberships.organizationId, organizationId)
-      )
-    );
+      eq(organizationMemberships.userId, userId) &&
+      eq(organizationMemberships.organizationId, organizationId)
+    )
+    .returning();
 
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-    with: {
-      organization: true,
-      organizationMemberships: true,
-    },
-  });
-
-  if (!user) throw new Error("User not found");
-
-  return user as UserWithOrganization;
+  return membership;
 }
 
-export async function removeUserFromOrganization(userId: string, organizationId: string) {
+export async function removeUserFromOrganization(
+  userId: string,
+  organizationId: string
+) {
   await db
     .delete(organizationMemberships)
     .where(
-      and(
-        eq(organizationMemberships.userId, userId),
-        eq(organizationMemberships.organizationId, organizationId)
-      )
+      eq(organizationMemberships.userId, userId) &&
+      eq(organizationMemberships.organizationId, organizationId)
     );
 }

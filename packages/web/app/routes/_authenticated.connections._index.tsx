@@ -5,11 +5,11 @@ import { listConnections } from "../lib/connections/config.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
-  if (!user.currentOrganization) {
+  if (!user.currentOrganization?.id) {
     throw new Error("No organization selected");
   }
 
-  const connections = await listConnections(user.currentOrganization);
+  const connections = await listConnections(user.currentOrganization.id);
   // Add status field to each connection
   const connectionsWithStatus = connections.map(conn => ({
     ...conn,
@@ -76,10 +76,10 @@ export default function ConnectionsIndexPage() {
                         {connection.type}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {connection.config.host}:{connection.config.port}
+                        {connection.host}:{connection.port}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {connection.config.database}
+                        {connection.database}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                         <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${

@@ -1,18 +1,19 @@
-import { Form, Link, useLocation, useSubmit } from "@remix-run/react";
-import { useTheme } from "../utils/theme";
+import { Menu, MenuItem, MenuItems, Transition } from '@headlessui/react';
 import {
-  TableCellsIcon as TableIcon,
   CircleStackIcon as DatabaseIcon,
-  SunIcon,
   MoonIcon,
+  SunIcon,
+  TableCellsIcon as TableIcon,
   UserCircleIcon,
 } from "@heroicons/react/24/outline";
-import { Menu, Transition } from '@headlessui/react';
-import { Fragment } from "react";
+import { Form, Link, useLocation, useSubmit } from "@remix-run/react";
 import clsx from "clsx";
+import { Fragment } from "react";
+import type { DatabaseConnection } from "../lib/db/schema";
+import { useTheme } from "../utils/theme";
 import { ConnectionSelector } from "./ConnectionSelector";
 import { ConnectionStatus } from "./ConnectionStatus";
-import type { DatabaseConnection } from "../lib/db/schema";
+import { Button } from './ui/button';
 
 interface User {
   id: string;
@@ -71,7 +72,7 @@ export default function Layout({ children, user, connections = [], activeConnect
                 activeConnectionId={activeConnection?.id}
                 onConnectionChange={handleConnectionChange}
               />
-              <ConnectionStatus connection={activeConnection} />
+              <ConnectionStatus connection={activeConnection as unknown as DatabaseConnection} />
             </div>
 
             <nav className="mt-5 flex-1 space-y-1 px-2" aria-label="Sidebar">
@@ -119,10 +120,10 @@ export default function Layout({ children, user, connections = [], activeConnect
                   leaveFrom="transform opacity-100 scale-100"
                   leaveTo="transform opacity-0 scale-95"
                 >
-                  <Menu.Items className="absolute left-0 right-0 mt-2 origin-top-right rounded-md bg-white dark:bg-dark-bg-tertiary shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                  <MenuItems className="absolute left-0 right-0 mt-2 origin-top-right rounded-md bg-white dark:bg-dark-bg-tertiary shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                     <div className="py-1">
                       {userNavigation.map((item) => (
-                        <Menu.Item key={item.name}>
+                        <MenuItem key={item.name}>
                           {({ active }) => (
                             <Link
                               to={item.href}
@@ -134,12 +135,12 @@ export default function Layout({ children, user, connections = [], activeConnect
                               {item.name}
                             </Link>
                           )}
-                        </Menu.Item>
+                        </MenuItem>
                       ))}
-                      <Menu.Item>
+                      <MenuItem>
                         {({ active }) => (
                           <Form action="/logout" method="post">
-                            <button
+                            <Button
                               type="submit"
                               className={clsx(
                                 active ? 'bg-gray-100 dark:bg-dark-bg-secondary' : '',
@@ -147,12 +148,12 @@ export default function Layout({ children, user, connections = [], activeConnect
                               )}
                             >
                               Sign out
-                            </button>
+                            </Button>
                           </Form>
                         )}
-                      </Menu.Item>
+                      </MenuItem>
                     </div>
-                  </Menu.Items>
+                  </MenuItems>
                 </Transition>
               </Menu>
             ) : (
@@ -171,7 +172,7 @@ export default function Layout({ children, user, connections = [], activeConnect
                 </Link>
               </div>
             )}
-            <button
+            <Button
               onClick={toggleTheme}
               className="flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-light-text-primary dark:text-dark-text-primary hover:bg-light-bg-tertiary dark:hover:bg-dark-bg-tertiary rounded-lg transition-colors"
             >
@@ -181,7 +182,7 @@ export default function Layout({ children, user, connections = [], activeConnect
                 <MoonIcon className="h-5 w-5 mr-2" />
               )}
               {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

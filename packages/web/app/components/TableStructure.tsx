@@ -1,5 +1,4 @@
 import type { TableSchema } from "~/types";
-import { cn } from '../lib/utils';
 
 interface TableStructureProps {
   table: TableSchema;
@@ -17,7 +16,7 @@ export function TableStructure({ table, onSave }: TableStructureProps) {
       </div>
 
       <div className="space-y-4">
-        {table.primaryKeys.length > 0 && (
+        {table.primaryKeys && table.primaryKeys.length > 0 && (
           <div>
             <h3 className="text-sm font-medium text-gray-500">Primary Keys</h3>
             <div className="mt-1 text-sm font-mono text-gray-900">

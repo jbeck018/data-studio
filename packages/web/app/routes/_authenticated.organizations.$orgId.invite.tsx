@@ -1,12 +1,13 @@
 import { json, redirect } from "@remix-run/node";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useParams } from "@remix-run/react";
-import { requireOrganizationRole } from "../lib/auth/session.server";
-import { db } from "../lib/db/db.server";
-import { users, organizationMembers } from "../lib/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { Role } from '../../lib/db/permissions-manager.server';
+import { Button } from "../components/ui/button";
+import { requireOrganizationRole } from "../lib/auth/session.server";
+import { db } from "../lib/db/db.server";
+import { Role } from '../lib/db/permissions-manager.server';
+import { organizationMembers, users } from "../lib/db/schema";
 
 const InviteUserSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -172,19 +173,19 @@ export default function InviteUserPage() {
           )}
 
           <div className="flex items-center justify-between space-x-4">
-            <button
+            <Button
               type="button"
               onClick={() => window.history.back()}
               className="flex-1 rounded border border-gray-500 px-4 py-2 text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700"
             >
               Back
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               className="flex-1 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 focus:bg-blue-400"
             >
               Send Invite
-            </button>
+            </Button>
           </div>
         </Form>
       </div>

@@ -1,22 +1,20 @@
 import { db } from "../db/db.server";
 import { databaseConnections } from "../db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
-import type { DatabaseConnection, ConnectionType } from "../db/schema/connections";
+import type { DatabaseConnection, ConnectionType, ConnectionConfig } from "../db/schema/types";
 
 // Schema for validating inputs
 const BaseConnectionSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   type: z.enum(["POSTGRES", "MYSQL", "SQLITE", "MSSQL", "ORACLE", "MONGODB", "REDIS"] as const),
-  host: z.string().optional(),
-  port: z.string().optional(),
-  database: z.string().optional(),
-  username: z.string().optional(),
-  password: z.string().optional(),
-  ssl: z.boolean().optional(),
-  filepath: z.string().optional(),
-  authSource: z.string().optional(),
-  replicaSet: z.string().optional(),
+  host: z.string().nullable(),
+  port: z.string().nullable(),
+  database: z.string().nullable(),
+  username: z.string().nullable(),
+  password: z.string().nullable(),
+  ssl: z.boolean().nullable(),
+  filepath: z.string().nullable(),
 });
 
 const StandardConnectionSchema = BaseConnectionSchema.extend({
@@ -51,25 +49,23 @@ const SQLiteConnectionSchema = BaseConnectionSchema.extend({
   filepath: z.string().min(1, "File path is required"),
 });
 
-// Updated ConnectionConfig type
-export type ConnectionConfig = Omit<DatabaseConnection, 'id'> & {
-  organizationId: string;
-  createdById: string;
-  filepath?: string;
-  authSource?: string;
-  replicaSet?: string;
-};
+export const ConnectionSchema = z.discriminatedUnion("type", [
+  StandardConnectionSchema,
+  MongoDBConnectionSchema,
+  RedisConnectionSchema,
+  SQLiteConnectionSchema,
+]);
 
-export type ConnectionInput = z.infer<typeof BaseConnectionSchema> & {
-  host?: string;
-  port?: string;
-  database?: string;
-  username?: string;
-  password?: string;
-  ssl?: boolean;
-  filepath?: string;
-  authSource?: string;
-  replicaSet?: string;
+export type ConnectionInput = {
+  type: ConnectionType;
+  name: string;
+  host?: string | null;
+  port?: string | null;
+  database?: string | null;
+  username?: string | null;
+  password?: string | null;
+  ssl?: boolean | null;
+  filepath?: string | null;
 };
 
 export function getDefaultPort(type: ConnectionType): number {
@@ -91,31 +87,24 @@ export function getDefaultPort(type: ConnectionType): number {
   }
 }
 
-export { type DatabaseConnection };
-
 export class ConnectionConfigManager {
   async createConnection(
-    config: z.infer<typeof StandardConnectionSchema> | z.infer<typeof MongoDBConnectionSchema> | z.infer<typeof RedisConnectionSchema> | z.infer<typeof SQLiteConnectionSchema>
+    config: ConnectionConfig
   ): Promise<DatabaseConnection> {
-    const connectionData: ConnectionConfig = {
-      name: config.name,
-      type: config.type,
-      host: config.host,
-      port: config.port,
-      database: config.database,
-      username: config.username,
-      password: config.password,
-      ssl: config.ssl,
-      filepath: config.filepath,
-      authSource: config.authSource,
-      replicaSet: config.replicaSet,
-      organizationId: config.organizationId,
-      createdById: config.createdById,
-    };
-
     const [connection] = await db
       .insert(databaseConnections)
-      .values(connectionData)
+      .values({
+        type: config.type,
+        name: config.name,
+        host: config.host,
+        port: config.port,
+        database: config.database,
+        username: config.username,
+        password: config.password,
+        ssl: config.ssl,
+        filepath: config.filepath,
+        organizationId: config.organizationId,
+      })
       .returning();
 
     return connection;
@@ -123,23 +112,11 @@ export class ConnectionConfigManager {
 
   async updateConnection(
     id: string,
-    config: Partial<ConnectionConfig> & {
-      name?: string;
-      type?: ConnectionType;
-    }
+    updates: Partial<ConnectionConfig>
   ): Promise<DatabaseConnection> {
     const [connection] = await db
       .update(databaseConnections)
-      .set({
-        ...(config.name && { name: config.name }),
-        ...(config.type && { type: config.type }),
-        ...(config.host && { host: config.host }),
-        ...(config.port && { port: config.port }),
-        ...(config.username && { username: config.username }),
-        ...(config.password && { password: config.password }),
-        ...(config.database && { database: config.database }),
-        ...(config.ssl && { ssl: config.ssl }),
-      })
+      .set(updates)
       .where(eq(databaseConnections.id, id))
       .returning();
 
@@ -162,24 +139,40 @@ export class ConnectionConfigManager {
 
   async deleteConnection(id: string): Promise<void> {
     await db
-      .update(databaseConnections)
-      .set({ archived: true })
+      .delete(databaseConnections)
       .where(eq(databaseConnections.id, id));
   }
 
   async validateConnectionConfig(config: ConnectionConfig): Promise<{ valid: boolean; error?: string }> {
     try {
-      // Basic validation
-      if (!config.host) return { valid: false, error: "Host is required" };
-      if (!config.port) return { valid: false, error: "Port is required" };
-      if (!config.username) return { valid: false, error: "Username is required" };
-      if (!config.password) return { valid: false, error: "Password is required" };
-      if (!config.database) return { valid: false, error: "Database is required" };
+      switch (config.type) {
+        case "POSTGRES":
+        case "MYSQL":
+        case "MSSQL":
+        case "ORACLE":
+          if (!config.host) return { valid: false, error: "Host is required" };
+          if (!config.port) return { valid: false, error: "Port is required" };
+          if (!config.username) return { valid: false, error: "Username is required" };
+          if (!config.password) return { valid: false, error: "Password is required" };
+          if (!config.database) return { valid: false, error: "Database is required" };
+          break;
+        case "SQLITE":
+          if (!config.filepath) return { valid: false, error: "File path is required" };
+          break;
+        case "MONGODB":
+        case "REDIS":
+          if (!config.host) return { valid: false, error: "Host is required" };
+          if (!config.port) return { valid: false, error: "Port is required" };
+          if (!config.username) return { valid: false, error: "Username is required" };
+          if (!config.password) return { valid: false, error: "Password is required" };
+          break;
+      }
 
-      // Port number validation
-      const port = parseInt(config.port);
-      if (isNaN(port) || port <= 0 || port > 65535) {
-        return { valid: false, error: "Invalid port number" };
+      if (config.port) {
+        const port = Number.parseInt(config.port, 10);
+        if (Number.isNaN(port) || port <= 0 || port > 65535) {
+          return { valid: false, error: "Invalid port number" };
+        }
       }
 
       return { valid: true };
@@ -190,30 +183,28 @@ export class ConnectionConfigManager {
 }
 
 export async function createConnection(
-  config: z.infer<typeof StandardConnectionSchema> | z.infer<typeof MongoDBConnectionSchema> | z.infer<typeof RedisConnectionSchema> | z.infer<typeof SQLiteConnectionSchema>
+  organizationId: string,
+  input: ConnectionInput
 ): Promise<DatabaseConnection> {
-  const connectionData: ConnectionConfig = {
-    name: config.name,
-    type: config.type,
-    host: config.host,
-    port: config.port,
-    database: config.database,
-    username: config.username,
-    password: config.password,
-    ssl: config.ssl,
-    filepath: config.filepath,
-    authSource: config.authSource,
-    replicaSet: config.replicaSet,
-    organizationId: config.organizationId,
-    createdById: config.createdById,
+  const config: ConnectionConfig = {
+    ...input,
+    organizationId,
+    host: input.host ?? null,
+    port: input.port ?? null,
+    database: input.database ?? null,
+    username: input.username ?? null,
+    password: input.password ?? null,
+    ssl: input.ssl ?? null,
+    filepath: input.filepath ?? null,
   };
 
-  const [connection] = await db
-    .insert(databaseConnections)
-    .values(connectionData)
-    .returning();
+  const manager = new ConnectionConfigManager();
+  const validation = await manager.validateConnectionConfig(config);
+  if (!validation.valid) {
+    throw new Error(validation.error);
+  }
 
-  return connection;
+  return manager.createConnection(config);
 }
 
 export async function updateConnection(
@@ -221,39 +212,41 @@ export async function updateConnection(
   organizationId: string,
   input: Partial<ConnectionInput>
 ): Promise<DatabaseConnection> {
-  const existingConnection = await getConnection(id, organizationId);
-  if (!existingConnection) {
+  const manager = new ConnectionConfigManager();
+  const existingConnection = await manager.getConnection(id);
+  
+  if (!existingConnection || existingConnection.organizationId !== organizationId) {
     throw new Error('Connection not found');
   }
 
-  const updatedConfig = {
-    ...existingConnection.config,
+  const updates: Partial<ConnectionConfig> = {
     ...input,
-  } as ConnectionConfig;
+    host: input.host ?? existingConnection.host,
+    port: input.port ?? existingConnection.port,
+    database: input.database ?? existingConnection.database,
+    username: input.username ?? existingConnection.username,
+    password: input.password ?? existingConnection.password,
+    ssl: input.ssl ?? existingConnection.ssl,
+    filepath: input.filepath ?? existingConnection.filepath,
+  };
 
-  const connectionConfigManager = new ConnectionConfigManager();
-  const result = await connectionConfigManager.validateConnectionConfig(updatedConfig);
-  if (!result.valid) {
-    throw new Error(result.error);
+  const validation = await manager.validateConnectionConfig({
+    ...existingConnection,
+    ...updates,
+  } as ConnectionConfig);
+
+  if (!validation.valid) {
+    throw new Error(validation.error);
   }
 
-  const connection = await connectionConfigManager.updateConnection(id, updatedConfig);
-  return connection;
-}
-
-export async function deleteConnection(id: string, organizationId: string): Promise<void> {
-  const connectionConfigManager = new ConnectionConfigManager();
-  await connectionConfigManager.deleteConnection(id);
+  return manager.updateConnection(id, updates);
 }
 
 export async function getConnection(id: string, organizationId: string): Promise<DatabaseConnection | null> {
-  const connectionConfigManager = new ConnectionConfigManager();
-  const connection = await connectionConfigManager.getConnection(id);
-  if (!connection) {
-    return null;
-  }
-
-  if (connection.organizationId !== organizationId) {
+  const manager = new ConnectionConfigManager();
+  const connection = await manager.getConnection(id);
+  
+  if (!connection || connection.organizationId !== organizationId) {
     return null;
   }
 
@@ -261,80 +254,28 @@ export async function getConnection(id: string, organizationId: string): Promise
 }
 
 export async function listConnections(organizationId: string): Promise<DatabaseConnection[]> {
-  const connectionConfigManager = new ConnectionConfigManager();
-  const connections = await connectionConfigManager.getConnectionsByOrganization(organizationId);
-  return connections;
+  const manager = new ConnectionConfigManager();
+  return manager.getConnectionsByOrganization(organizationId);
 }
 
 export async function testConnection(input: ConnectionInput): Promise<boolean> {
-  const config = createConnectionConfig(input);
-  const connectionConfigManager = new ConnectionConfigManager();
-  const result = await connectionConfigManager.validateConnectionConfig(config);
-  if (!result.valid) {
-    throw new Error(result.error);
+  const config: ConnectionConfig = {
+    ...input,
+    organizationId: '', // This will be set by the calling function
+    host: input.host ?? null,
+    port: input.port ?? null,
+    database: input.database ?? null,
+    username: input.username ?? null,
+    password: input.password ?? null,
+    ssl: input.ssl ?? null,
+    filepath: input.filepath ?? null,
+  };
+
+  const manager = new ConnectionConfigManager();
+  const validation = await manager.validateConnectionConfig(config);
+  if (!validation.valid) {
+    throw new Error(validation.error);
   }
 
   return true; // TODO: Implement actual connection testing
-}
-
-function createConnectionConfig(input: ConnectionInput): ConnectionConfig {
-  const { type, name, ...rest } = input;
-  const baseConfig = {
-    type,
-    name,
-    ...rest,
-  };
-
-  switch (type) {
-    case 'POSTGRES':
-    case 'MYSQL':
-    case 'MSSQL':
-    case 'ORACLE':
-      return {
-        ...baseConfig,
-        type,
-        host: input.host || 'localhost',
-        port: input.port || getDefaultPort(type).toString(),
-        database: input.database || '',
-        username: input.username || '',
-        password: input.password || '',
-        ssl: input.ssl || false,
-      };
-
-    case 'SQLITE':
-      return {
-        ...baseConfig,
-        type,
-        filepath: input.filepath || ':memory:',
-      };
-
-    case 'MONGODB':
-      return {
-        ...baseConfig,
-        type,
-        host: input.host || 'localhost',
-        port: input.port || getDefaultPort(type).toString(),
-        database: input.database || '',
-        username: input.username || '',
-        password: input.password || '',
-        ssl: input.ssl || false,
-        authSource: input.authSource || 'admin',
-        replicaSet: input.replicaSet,
-      };
-
-    case 'REDIS':
-      return {
-        ...baseConfig,
-        type,
-        host: input.host || 'localhost',
-        port: input.port || getDefaultPort(type).toString(),
-        username: input.username || '',
-        password: input.password || '',
-        database: (input.database || '0').toString(),
-        ssl: input.ssl || false,
-      };
-
-    default:
-      throw new Error(`Unsupported connection type: ${type}`);
-  }
 }

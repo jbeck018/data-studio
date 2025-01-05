@@ -1,8 +1,9 @@
 import { json, redirect } from "@remix-run/node";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useParams } from "@remix-run/react";
-import { requireUser } from "../lib/auth/session.server";
 import { z } from "zod";
+import { Button } from "../components/ui/button";
+import { requireUser } from "../lib/auth/session.server";
 import { createDatabaseConnection } from "../lib/connections/pool.server";
 
 const CreateConnectionSchema = z.object({
@@ -331,19 +332,19 @@ export default function NewConnectionPage() {
           ) : null}
 
           <div className="flex items-center justify-between space-x-4">
-            <button
+            <Button
               type="button"
               onClick={() => window.history.back()}
               className="flex-1 rounded border border-gray-500 px-4 py-2 text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700"
             >
               Back
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               className="flex-1 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 focus:bg-blue-400"
             >
               Create Connection
-            </button>
+            </Button>
           </div>
         </Form>
       </div>

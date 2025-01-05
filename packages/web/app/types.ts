@@ -1,74 +1,13 @@
-import type { Organization as DrizzleOrganization, User as DrizzleUser } from "~/lib/db/schema/auth";
+import type { User, Organization, Role, OrganizationMembership } from '~/lib/db/schema/auth';
+import type { DatabaseConnection, ConnectionConfig, ConnectionPermission } from '~/lib/db/schema/connections';
 
-// Extend the base Organization type with additional properties
-export interface Organization extends DrizzleOrganization {
-  id: string;
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
-  members?: OrganizationMembership[];
-}
+// Database value type
+export type DatabaseValue = string | number | boolean | null | Record<string, unknown>;
 
-// Define the OrganizationMembership type
-export interface OrganizationMembership {
-  id: string;
-  userId: string;
-  organizationId: string;
-  role: Role;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Query parameters type
+export type QueryParams = string | number | boolean | null | undefined;
 
-// Define the Role type
-export type Role = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER";
-
-// Extend the base User type with additional properties
-export interface User extends DrizzleUser {
-  id: string;
-  name: string;
-  email: string;
-  hashedPassword: string;
-  createdAt: Date;
-  updatedAt: Date;
-  lastLogin: Date | null;
-  organizationId: string | null;
-  organizationMemberships?: OrganizationMembership[];
-  currentOrganization?: Organization;
-}
-
-// Extend the base User type with organization relationships
-export interface UserWithOrganization extends User {
-  organization: Organization;
-  organizationMemberships: OrganizationMembership[];
-  currentOrganization: Organization;
-}
-
-// Database connection types
-export type ConnectionType = "POSTGRES" | "MYSQL" | "SQLITE" | "MONGODB" | "REDIS";
-
-// Database connection configuration
-export interface ConnectionConfig {
-  type: "POSTGRES" | "MYSQL" | "SQLITE" | "MONGODB" | "REDIS";
-  host?: string;
-  port?: string;
-  username?: string;
-  password?: string;
-  database?: string;
-  ssl?: boolean;
-  filepath?: string;
-}
-
-// Database connection
-export interface DatabaseConnection extends ConnectionConfig {
-  id: string;
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
-  organizationId: string;
-  lastUsed: Date | null;
-}
-
-// Table schema column
+// Column schema
 export interface ColumnSchema {
   columnName: string;
   name: string;
@@ -78,6 +17,14 @@ export interface ColumnSchema {
   defaultValue: string | null;
   isPrimaryKey: boolean;
   isForeignKey: boolean;
+  nullable: boolean;
+}
+
+// Foreign key definition
+export interface ForeignKeyDefinition {
+  columnName: string;
+  referencedTable: string;
+  referencedColumn: string;
 }
 
 // Table schema
@@ -87,7 +34,7 @@ export interface TableSchema {
   connectionId: string;
   columns: ColumnSchema[];
   primaryKeys: string[] | null;
-  foreignKeys: any[];
+  foreignKeys: ForeignKeyDefinition[];
   rowCount: number;
   sizeInBytes: number;
 }
@@ -109,14 +56,15 @@ export interface QueryMetrics {
 // Query result
 export interface QueryResult {
   fields: QueryField[];
-  rows: Record<string, any>[];
+  rows: Record<string, DatabaseValue>[];
   rowCount: number;
   metrics: QueryMetrics;
+  executionTime?: number;
 }
 
 // Database client
 export interface DatabaseClient {
-  query: (sql: string, params?: any[]) => Promise<QueryResult>;
+  query: (sql: string, params?: QueryParams[]) => Promise<QueryResult>;
   close: () => Promise<void>;
   testConnection: () => Promise<boolean>;
 }
@@ -125,7 +73,8 @@ export interface DatabaseClient {
 export interface Node {
   id: string;
   name: string;
-  type: "table" | "view";
+  type: 'table' | 'view';
+  data?: Record<string, unknown>;
 }
 
 export interface Edge {
@@ -139,17 +88,14 @@ export interface TableNode extends Node {
   data: {
     columns: ColumnSchema[];
     primaryKeys: string[];
-    foreignKeys: {
-      columnName: string;
-      referencedTable: string;
-      referencedColumn: string;
-    }[];
+    foreignKeys: ForeignKeyDefinition[];
+    label?: string;
   };
 }
 
 export interface ProcessedSchemaTable {
   name: string;
-  type: "table";
+  type: 'table';
   columns: Array<{
     name: string;
     type: string;
@@ -164,15 +110,7 @@ export interface ProcessedSchemaTable {
   }>;
 }
 
-export interface ConnectionPermission {
-  id: string;
-  userId: string;
-  connectionId: string;
-  organizationId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
+// Query history
 export interface QueryHistory {
   id: string;
   userId: string;
@@ -185,13 +123,15 @@ export interface QueryHistory {
   createdAt: Date;
 }
 
+// Table data response
 export interface TableDataResponse {
-  data: Record<string, any>[];
+  data: Record<string, DatabaseValue>[];
   totalRows: number;
   page?: number;
   pageSize?: number;
 }
 
+// Session data
 export interface SessionData {
   userId: string;
   organizationId?: string;
@@ -200,12 +140,14 @@ export interface SessionData {
   expiresAt?: Date;
 }
 
+// Login credentials
 export interface LoginCredentials {
   email: string;
   password: string;
   remember?: boolean;
 }
 
+// User session
 export interface UserSession {
   user: User;
   organization?: Organization;
@@ -216,18 +158,41 @@ export interface UserSession {
   };
 }
 
-export interface OrganizationWithRole extends Organization {
-  role: Role;
-}
-
-// WebSocket Types
+// WebSocket types
 export interface WebSocketMessage {
   type: string;
-  payload: any;
+  payload: Record<string, unknown>;
 }
 
 export interface AuthenticatedWebSocket extends WebSocket {
   userId: string;
   isAlive: boolean;
   channels: Set<string>;
+}
+
+// User with organization
+export interface UserWithOrganization extends User {
+  organizationMemberships: OrganizationMembership[];
+  currentOrganization?: Organization;
+  id: string;
+  email: string;
+  name: string;
+}
+
+// Query restriction
+export interface QueryRestriction {
+  maxRowsPerQuery?: number;
+  allowedTables?: string[];
+  allowedSchemas?: string[];
+  blockedTables?: string[];
+  blockedSchemas?: string[];
+  timeoutSeconds?: number;
+}
+
+// Permission
+export interface Permission {
+  userId: string;
+  isAdmin: boolean;
+  canConnect: boolean;
+  queryRestrictions: QueryRestriction;
 }

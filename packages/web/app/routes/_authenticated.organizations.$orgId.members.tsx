@@ -1,9 +1,9 @@
 import { json } from "@remix-run/node";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
-import { requireOrganization } from "../lib/auth/session.server";
+import { requireOrganizationRole } from "../lib/auth/session.server";
 import { db } from "../lib/db/db.server";
-import { organizationMembers } from "../lib/db/schema";
+import { organizationMemberships } from "../lib/db/schema";
 import { eq } from "drizzle-orm";
 
 interface LoaderData {
@@ -18,11 +18,15 @@ interface LoaderData {
 }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
-  const user = await requireOrganization(request);
+  if (!params.orgId) {
+    throw new Error("Organization ID is required");
+  }
+
+  const membership = await requireOrganizationRole(request, params.orgId);
 
   // Get all members of the organization
-  const members = await db.query.organizationMembers.findMany({
-    where: eq(organizationMembers.organizationId, params.orgId!),
+  const members = await db.query.organizationMemberships.findMany({
+    where: eq(organizationMemberships.organizationId, params.orgId),
     with: {
       user: true,
     },
@@ -37,7 +41,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       role: member.role,
       joinedAt: member.createdAt.toISOString(),
     })),
-    isAdmin: user.organizationRole === "ADMIN",
+    isAdmin: membership.role === "ADMIN" || membership.role === "OWNER",
   });
 }
 

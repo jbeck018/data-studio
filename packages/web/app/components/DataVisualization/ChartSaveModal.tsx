@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import type { ChartData } from './ChartComponent';
 import type { SavedChart } from '../../utils/chartStorage';
 import { saveChart, updateChart } from '../../utils/chartStorage';
+import { Button } from '../ui/button';
+import type { ChartData } from './ChartComponent';
 
 interface ChartSaveModalProps {
   chart: ChartData;
@@ -95,18 +96,18 @@ export function ChartSaveModal({
           )}
 
           <div className="flex justify-end space-x-3 pt-4">
-            <button
+            <Button
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleSave}
               className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md transition-colors"
             >
               {existingChart ? 'Update' : 'Save'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

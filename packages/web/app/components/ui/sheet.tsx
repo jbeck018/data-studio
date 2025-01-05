@@ -13,10 +13,9 @@ const SheetClose = Dialog.Close
 
 const SheetPortal = ({
   children,
-  className,
   ...props
 }: Dialog.DialogPortalProps) => (
-  <Dialog.Portal className={cn(className)} {...props}>
+  <Dialog.Portal {...props}>
     {children}
   </Dialog.Portal>
 )

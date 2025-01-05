@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
+import { Button } from './ui/button';
 
-interface Column {
+export interface Column {
   field: string;
   headerName: string;
   width: number;
@@ -97,23 +98,23 @@ export function DataGrid({
         </div>
 
         <div className="flex items-center space-x-2">
-          <button
+          <Button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 0}
             className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50"
           >
             Previous
-          </button>
+          </Button>
           <span className="text-sm text-gray-700">
             Page {currentPage + 1} of {Math.ceil(rows.length / pageSize)}
           </span>
-          <button
+          <Button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={endIndex >= rows.length}
             className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50"
           >
             Next
-          </button>
+          </Button>
         </div>
       </div>
     </div>

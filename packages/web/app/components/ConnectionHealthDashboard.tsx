@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
 import { useSubmit } from '@remix-run/react';
+import { useEffect, useState } from 'react';
+import { Button } from './ui/button';
 
 export interface ConnectionHealth {
   connectionId: string;
@@ -60,12 +61,12 @@ export function ConnectionHealthDashboard({ connections, onRefresh }: Connection
             />
             <span className="ml-2 text-sm text-gray-700">Auto-refresh</span>
           </label>
-          <button
+          <Button
             onClick={onRefresh}
             className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             Refresh
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -78,6 +79,11 @@ export function ConnectionHealthDashboard({ connections, onRefresh }: Connection
               selectedConnection === conn.connectionId ? 'ring-2 ring-indigo-500' : ''
             }`}
             onClick={() => setSelectedConnection(conn.connectionId)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                setSelectedConnection(conn.connectionId);
+              }
+            }}
           >
             <div className="px-4 py-5 sm:p-6">
               <div className="flex items-center justify-between">
@@ -133,12 +139,12 @@ export function ConnectionHealthDashboard({ connections, onRefresh }: Connection
                         Last health check: {new Date(conn.lastHealthCheck).toLocaleString()}
                       </p>
                     </div>
-                    <button
+                    <Button
                       onClick={() => handleResetConnection(conn.connectionId)}
                       className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
                       Reset Connection
-                    </button>
+                    </Button>
                   </div>
 
                   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

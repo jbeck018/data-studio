@@ -1,4 +1,5 @@
-import { FolderIcon, TableCellsIcon, CircleStackIcon } from "@heroicons/react/24/outline";
+import { CircleStackIcon, FolderIcon, TableCellsIcon } from "@heroicons/react/24/outline";
+import { Button } from "./ui/button";
 
 type EmptyStateType = "table" | "query" | "database";
 
@@ -33,12 +34,12 @@ export function EmptyState({ type, title, message, action }: EmptyStateProps) {
         {message}
       </p>
       {action && (
-        <button
+        <Button
           onClick={action.onClick}
           className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
         >
           {action.label}
-        </button>
+        </Button>
       )}
     </div>
   );

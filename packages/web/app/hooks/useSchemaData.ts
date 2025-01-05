@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { TableSchema, Column } from '../types';
+import type { TableSchema } from '../types';
 
 export interface ProcessedSchemaTable {
   type: 'table';
@@ -22,7 +22,7 @@ export function useSchemaData(schema: TableSchema[]): ProcessedSchemaTable[] {
     return schema.map((table) => ({
       type: 'table' as const,
       tableName: table.tableName,
-      primaryKeys: table.primaryKeys,
+      primaryKeys: table.primaryKeys || [],
       foreignKeys: table.foreignKeys.map(fk => ({
         columnName: fk.columnName,
         referencedTable: fk.referencedTable,
@@ -31,7 +31,7 @@ export function useSchemaData(schema: TableSchema[]): ProcessedSchemaTable[] {
       columns: table.columns.map(col => ({
         name: col.columnName,
         type: col.dataType,
-        nullable: col.nullable,
+        nullable: col.isNullable,
       })),
     }));
   }, [schema]);
