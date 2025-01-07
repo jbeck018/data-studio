@@ -1,4 +1,4 @@
-import { useLoaderData } from '@remix-run/react';
+import { useLoaderData } from 'react-router';
 import { fetchDatabaseSchema } from '../utils/database.server';
 import { SchemaVisualization } from '../components/SchemaVisualization';
 import { PageContainer } from '../components/PageContainer';

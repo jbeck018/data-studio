@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { json } from '@remix-run/node';
-import { useLoaderData, useFetcher } from '@remix-run/react';
+import { useState } from 'react';
+import { useFetcher } from 'react-router';
 import { VisualizationManager } from '../components/DataVisualization';
 import { SQLEditor } from '../components/SQLEditor';
 import { ScrollArea } from '../components/ui/scroll-area';

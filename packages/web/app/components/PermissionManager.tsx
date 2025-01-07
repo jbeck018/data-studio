@@ -1,4 +1,4 @@
-import { Form, useSubmit } from '@remix-run/react';
+import { Form, useSubmit } from 'react-router';
 import { useState } from 'react';
 import type { QueryRestriction } from '../lib/db/schema/permissions';
 import { Button } from './ui/button';

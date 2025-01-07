@@ -1,6 +1,6 @@
 import { createServer } from 'http';
 import express from 'express';
-import { createRequestHandler } from '@remix-run/express';
+import { createRequestHandler } from '@react-router/express';
 import { webSocketManager } from './services/websocket.server';
 
 const app = express();

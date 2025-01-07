@@ -1,4 +1,4 @@
-import { createCookieSessionStorage, redirect } from "@remix-run/node";
+import { createCookieSessionStorage, redirect } from "react-router";
 import { db } from "~/lib/db/db.server";
 import { eq } from "drizzle-orm";
 import type { UserWithOrganization } from "~/lib/db/schema/types";

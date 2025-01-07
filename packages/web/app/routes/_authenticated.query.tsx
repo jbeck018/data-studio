@@ -3,8 +3,8 @@ import type { QueryResult } from "~/types";
 import { PageContainer } from "~/components/PageContainer";
 import { LoadingSpinner } from "~/components/LoadingSpinner";
 import { Alert, AlertDescription } from "~/components/ui/alert";
-import { json, type LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useActionData, useSubmit } from "@remix-run/react";
+import { type LoaderFunctionArgs } from "react-router";
+import { useLoaderData, useActionData, useSubmit } from "react-router";
 import { requireUser } from "~/lib/auth/session.server";
 import { db } from "~/lib/db/db.server";
 import { databaseConnections } from "~/lib/db/schema";
@@ -66,7 +66,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
   }
 
-  return json<LoaderData>({ schemas, connections, activeConnectionId, error });
+  return { schemas, connections, activeConnectionId, error };
 }
 
 export async function action({ request }: { request: Request }) {
@@ -76,23 +76,23 @@ export async function action({ request }: { request: Request }) {
   const connectionId = formData.get("connectionId") as string;
 
   if (!query) {
-    return json<ActionData>({ error: "Query is required" });
+    return { error: "Query is required" };
   }
 
   if (!connectionId) {
-    return json<ActionData>({ error: "Connection ID is required" });
+    return { error: "Connection ID is required" };
   }
 
   try {
     const connection = await connectionManager.getConnection(connectionId);
     if (!connection) {
-      return json<ActionData>({ error: "Connection not found" });
+      return { error: "Connection not found" };
     }
 
     const result = await connection.query(query);
-    return json<ActionData>({ result });
+    return { result };
   } catch (err) {
-    return json<ActionData>({ error: err instanceof Error ? err.message : "Failed to execute query" });
+    return { error: err instanceof Error ? err.message : "Failed to execute query" };
   }
 }
 

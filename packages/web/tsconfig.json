@@ -1,10 +1,17 @@
 {
   "compilerOptions": {
-    "types": ["@remix-run/node", "vite/client"],
+    "types": [
+      "@react-router/node",
+      "vite/client"
+    ],
     "target": "ES2015",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2015", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2015",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "jsx": "react-jsx",
     "strict": true,
     "noEmit": true,
@@ -15,11 +22,21 @@
     "resolveJsonModule": true,
     "downlevelIteration": true,
     "paths": {
-      "~/*": ["./app/*"]
+      "~/*": [
+        "./app/*"
+      ]
     },
     "baseUrl": ".",
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["**/*.test.{ts,tsx}", "**/__tests__/**/*.{ts,tsx}", "node_modules"]
+  "include": [
+    "remix.env.d.ts",
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "**/*.test.{ts,tsx}",
+    "**/__tests__/**/*.{ts,tsx}",
+    "node_modules"
+  ]
 }

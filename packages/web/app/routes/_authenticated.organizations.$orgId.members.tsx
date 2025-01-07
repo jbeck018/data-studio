@@ -1,6 +1,5 @@
-import { json } from "@remix-run/node";
-import type { LoaderFunctionArgs } from "@remix-run/node";
-import { Link, useLoaderData } from "@remix-run/react";
+import type { LoaderFunctionArgs } from "react-router";
+import { Link, useLoaderData } from "react-router";
 import { requireOrganizationRole } from "../lib/auth/session.server";
 import { db } from "../lib/db/db.server";
 import { organizationMemberships } from "../lib/db/schema";
@@ -33,7 +32,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     orderBy: (members, { desc }) => [desc(members.createdAt)],
   });
 
-  return json<LoaderData>({
+  return {
     members: members.map((member) => ({
       id: member.id,
       email: member.user.email,
@@ -42,7 +41,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       joinedAt: member.createdAt.toISOString(),
     })),
     isAdmin: membership.role === "ADMIN" || membership.role === "OWNER",
-  });
+  };
 }
 
 export default function MembersPage() {

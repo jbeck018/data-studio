@@ -1,5 +1,5 @@
-import { type LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useSearchParams } from "@remix-run/react";
+import { type LoaderFunctionArgs } from "react-router";
+import { useLoaderData, useSearchParams } from "react-router";
 import { TabView } from "../components/TabView";
 import { EmptyState } from "../components/EmptyState";
 import { RowDetailsSidebar } from "../components/RowDetailsSidebar";

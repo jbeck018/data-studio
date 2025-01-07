@@ -1,4 +1,4 @@
-import { Outlet, useLoaderData } from "@remix-run/react";
+import { Outlet, useLoaderData } from "react-router";
 import type { UserWithOrganization } from "~/lib/db/schema";
 import type { DatabaseConnection } from "~/lib/db/schema";
 import { ConnectionSelector } from "./ConnectionSelector";

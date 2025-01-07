@@ -1,6 +1,6 @@
-import { redirect } from '@remix-run/node';
+import { redirect } from 'react-router';
 import { getSession, setActiveConnection } from '../lib/auth/session.server';
-import type { ActionFunctionArgs } from '@remix-run/node';
+import type { ActionFunctionArgs } from 'react-router';
 
 export async function action({ request }: ActionFunctionArgs) {
   const session = await getSession(request);

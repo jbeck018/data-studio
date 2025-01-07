@@ -1,5 +1,5 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { Form } from "@remix-run/react";
+import { Form } from "react-router";
 import { Fragment } from "react";
 import { Button } from "./ui/button";
 

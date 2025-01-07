@@ -1,6 +1,6 @@
-import { json, redirect } from "@remix-run/node";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { Form, useActionData, useParams } from "@remix-run/react";
+import { data, redirect } from "react-router";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { Form, useActionData, useParams } from "react-router";
 import { z } from "zod";
 import { Button } from "../components/ui/button";
 import { requireUser } from "../lib/auth/session.server";
@@ -56,7 +56,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   });
 
   if (!result.success) {
-    return json<ActionData>({ errors: result.error.flatten() }, { status: 400 });
+    return data<ActionData>({ errors: result.error.flatten() }, { status: 400 });
   }
 
   try {
@@ -68,7 +68,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     return redirect(`/organizations/${params.orgId}/connections/${connection.id}`);
   } catch (error) {
     if (error instanceof Error) {
-      return json<ActionData>(
+      return data<ActionData>(
         {
           errors: {
             formErrors: [error.message],
@@ -78,7 +78,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         { status: 400 }
       );
     }
-    return json<ActionData>(
+    return data<ActionData>(
       {
         errors: {
           formErrors: ["An unexpected error occurred"],

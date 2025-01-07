@@ -1,5 +1,5 @@
-import { type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
-import { Form, useActionData, useLoaderData } from "@remix-run/react";
+import { type ActionFunctionArgs, type LoaderFunctionArgs } from "react-router";
+import { Form, useActionData, useLoaderData } from "react-router";
 import { z } from "zod";
 import { Button } from "../components/ui/button";
 import { getUserById, updateUser } from "../lib/auth/auth.server";

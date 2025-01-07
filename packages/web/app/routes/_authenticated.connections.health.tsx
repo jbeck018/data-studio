@@ -1,5 +1,5 @@
-import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
-import { useLoaderData, useSubmit } from '@remix-run/react';
+import type { LoaderFunctionArgs, ActionFunctionArgs } from 'react-router';
+import { useLoaderData, useSubmit } from 'react-router';
 import { db } from '../lib/db/db.server';
 import { requireUser } from '../lib/auth/session.server';
 import { databaseConnections } from '../lib/db/schema';

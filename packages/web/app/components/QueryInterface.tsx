@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Form } from '@remix-run/react';
+import { Form } from 'react-router';
 import { Button } from './ui/button';
 import { Alert } from './ui/alert';
 import { QueryEditor } from './QueryEditor';

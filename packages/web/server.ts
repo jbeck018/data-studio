@@ -1,6 +1,5 @@
-import type { RequestHandler } from "@remix-run/express";
-import { createRequestHandler } from "@remix-run/express";
-import { broadcastDevReady } from "@remix-run/node";
+import type { RequestHandler } from "@react-router/express";
+import { createRequestHandler } from "@react-router/express";
 import express from "express";
 import { Server } from "http";
 import type { ViteDevServer } from "vite";
@@ -30,7 +29,7 @@ async function startServer(): Promise<void> {
 
     const build = viteDevServer
       ? async () => {
-          const build = await viteDevServer!.ssrLoadModule("virtual:remix/server-build");
+          const build = await viteDevServer!.ssrLoadModule("virtual:react-router/server-build");
           return build;
         }
       : async () => {
@@ -54,8 +53,7 @@ async function startServer(): Promise<void> {
     });
 
     if (process.env.NODE_ENV === "development") {
-      const b = await build();
-      broadcastDevReady(b as any);
+      await build();
     }
 
     // Graceful shutdown

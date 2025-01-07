@@ -6,7 +6,7 @@ import {
   TableCellsIcon as TableIcon,
   UserCircleIcon,
 } from "@heroicons/react/24/outline";
-import { Form, Link, useLocation, useSubmit } from "@remix-run/react";
+import { Form, Link, useLocation, useSubmit } from "react-router";
 import clsx from "clsx";
 import { Fragment } from "react";
 import type { DatabaseConnection } from "../lib/db/schema";

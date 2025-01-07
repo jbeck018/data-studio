@@ -1,4 +1,4 @@
-import type { ActionFunctionArgs } from '@remix-run/node';
+import type { ActionFunctionArgs } from 'react-router';
 import { requireUser } from '../lib/auth/auth.server';
 import { connectionManager } from '../lib/db/connection-manager.server';
 import { auditLogger } from '../lib/audit/audit-logger.server';

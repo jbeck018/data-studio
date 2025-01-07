@@ -1,6 +1,6 @@
-import { json, redirect } from "@remix-run/node";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { Form, Link, useActionData, useLoaderData } from "@remix-run/react";
+import { data, redirect } from "react-router";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { Form, Link, useActionData, useLoaderData } from "react-router";
 import { eq } from "drizzle-orm";
 import { Button } from "../components/ui/button";
 import { requireUser } from "../lib/auth/session.server";
@@ -36,13 +36,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
     },
   });
 
-  return json<LoaderData>({
+  return {
     organizations: userOrgs.map((org) => ({
       id: org.organizationId,
       name: org.organization.name,
       role: org.role,
     })),
-  });
+  };
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -51,7 +51,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const organizationId = formData.get("organizationId") as string;
 
   if (!organizationId) {
-    return json<ActionData>({ error: "Organization ID is required" }, { status: 400 });
+    return data<ActionData>({ error: "Organization ID is required" }, { status: 400 });
   }
 
   // Verify user is a member of the organization
@@ -63,7 +63,7 @@ export async function action({ request }: ActionFunctionArgs) {
   });
 
   if (!membership) {
-    return json<ActionData>({ error: "You are not a member of this organization" }, { status: 403 });
+    return data<ActionData>({ error: "You are not a member of this organization" }, { status: 403 });
   }
 
   return setCurrentOrganization(request, organizationId);

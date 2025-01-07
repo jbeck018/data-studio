@@ -1,5 +1,5 @@
-import { type ActionFunctionArgs, type LoaderFunctionArgs, json, redirect } from "@remix-run/node";
-import { Form, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { type ActionFunctionArgs, data, type LoaderFunctionArgs, redirect } from "react-router";
+import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import { Button } from "../components/ui/button";
 import { requireUser } from "../lib/auth/session.server";
 import { 
@@ -46,7 +46,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     throw new Response("Not Found", { status: 404 });
   }
 
-  return json<LoaderData>({ connection });
+  return { connection };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -80,26 +80,26 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const result = ConnectionSchema.safeParse(rawData);
 
   if (!result.success) {
-    return json<ActionData>({
+    return {
       errors: {
         formErrors: [],
         fieldErrors: result.error.formErrors.fieldErrors,
       },
-    });
+    };
   }
 
   try {
     if (intent === "test") {
       const success = await testConnection(result.data);
-      return json<ActionData>({
+      return {
         tested: success,
-      });
+      };
     }
 
     await updateConnection(params.id!, user.currentOrganization.id, result.data);
     return redirect("/connections");
   } catch (error) {
-    return json<ActionData>(
+    return data<ActionData>(
       {
         errors: {
           formErrors: [(error as Error).message],

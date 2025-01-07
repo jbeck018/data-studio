@@ -1,12 +1,5 @@
-import {
-  Links,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-  useLoaderData,
-} from "@remix-run/react";
-import { LoaderFunction } from "@remix-run/node";
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "react-router";
+import { LoaderFunction } from "react-router";
 import styles from "./tailwind.css";
 import { ThemeProvider } from "./utils/theme";
 import Layout from "./components/Layout";
@@ -31,8 +24,8 @@ export const loader: LoaderFunction = async ({ request }) => {
   };
 };
 
-export default function App() {
-  const { connections, activeConnection } = useLoaderData<typeof loader>();
+export default function App({ loaderData }: { loaderData: LoaderFunction }) {
+  const { connections, activeConnection } = useLoaderData();
 
   return (
     <html lang="en" className="h-full">

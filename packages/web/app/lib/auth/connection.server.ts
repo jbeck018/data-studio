@@ -1,4 +1,4 @@
-import { redirect } from '@remix-run/node';
+import { redirect } from 'react-router';
 import { db } from '../../lib/db/db.server';
 import { databaseConnections } from '../../lib/db/schema';
 import { eq, and } from 'drizzle-orm';

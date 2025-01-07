@@ -1,5 +1,5 @@
-import { Link } from "@remix-run/react";
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import { Link } from "react-router";
+import type { LoaderFunctionArgs } from "react-router";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   return {};

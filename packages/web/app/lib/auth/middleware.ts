@@ -1,4 +1,4 @@
-import { redirect } from "@remix-run/node";
+import { redirect } from "react-router";
 import { requireUser } from "./auth.server";
 import { Role, ROLE_LEVELS } from "../db/schema";
 

@@ -1,7 +1,7 @@
-import { redirect } from "@remix-run/node";
-import { Outlet, useLoaderData } from "@remix-run/react";
+import { redirect } from "react-router";
+import { Outlet, useLoaderData } from "react-router";
 import { getUser } from "../lib/auth/session.server";
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "react-router";
 import { AuthenticatedLayout } from "../components/AuthenticatedLayout";
 import type { DatabaseConnection, User } from "../lib/auth/types";
 import { listConnections } from "../lib/connections/config.server";

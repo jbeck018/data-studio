@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs } from '@remix-run/node';
+import { type ActionFunctionArgs } from 'react-router';
 import { z } from 'zod';
 import { db } from '../lib/db/db.server';
 import { ConnectionConfig, databaseConnections, NewDatabaseConnection, organizationMemberships } from '../lib/db/schema';

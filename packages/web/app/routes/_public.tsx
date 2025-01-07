@@ -1,7 +1,7 @@
-import { redirect } from "@remix-run/node";
-import { Outlet } from "@remix-run/react";
+import { redirect } from "react-router";
+import { Outlet } from "react-router";
 import { getUser } from "../lib/auth/session.server";
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import type { LoaderFunctionArgs } from "react-router";
 import PublicLayout from "../components/PublicLayout";
 
 export async function loader({ request }: LoaderFunctionArgs) {

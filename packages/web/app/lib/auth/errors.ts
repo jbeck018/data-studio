@@ -1,4 +1,4 @@
-import { redirect } from "@remix-run/node";
+import { redirect } from "react-router";
 import { AuthErrorCode } from "./types";
 
 export class AuthError extends Error {
