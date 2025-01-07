@@ -1,4 +1,4 @@
-import type { Pool } from 'pg';
+import pg from 'pg';
 import type { ProcessedSchemaTable, TableNodeData, Column } from '../types/schema';
 
 export interface SchemaInfo {
@@ -56,10 +56,10 @@ export interface RelationshipInfo {
  * Manages interactions with pg_ai extension for embeddings and vector search
  */
 export class PgAI {
-  private pool: Pool;
+  private pool: pg.Pool;
   private config: Required<PgAIConfig>;
 
-  constructor(pool: Pool, config: PgAIConfig = {}) {
+  constructor(pool: pg.Pool, config: PgAIConfig = {}) {
     this.pool = pool;
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
@@ -264,6 +264,6 @@ export class PgAI {
 /**
  * Creates a new instance of PgAI
  */
-export function createPgAI(pool: Pool, config?: PgAIConfig): PgAI {
+export function createPgAI(pool: pg.Pool, config?: PgAIConfig): PgAI {
   return new PgAI(pool, config);
 }

@@ -1,4 +1,4 @@
-import type { Pool } from 'pg';
+import pg from 'pg';
 import type { TableNode, RelationshipEdge } from '../types/schema';
 import type { SchemaInfo } from './pgAI';
 
@@ -253,7 +253,7 @@ function getRelationshipData(rel: any) {
 /**
  * Seeds the query_patterns table with common patterns
  */
-export async function seedQueryPatterns(pool: Pool): Promise<void> {
+export async function seedQueryPatterns(pool: pg.Pool): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

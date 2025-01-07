@@ -1,7 +1,6 @@
-import pkg from 'pg';
-const { Pool } = pkg;
+import pg from 'pg';
 
-export const pool = new Pool({
+export const pool = new pg.Pool({
   user: process.env.PGUSER || 'postgres',
   host: process.env.PGHOST || 'localhost',
   database: process.env.PGDATABASE || 'postgres',

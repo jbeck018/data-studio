@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
 import type { TableNode, RelationshipEdge } from '../types/schema';
-import type { Pool } from 'pg';
+import pg from 'pg';
 import { useQuerySuggestions } from '../hooks/useQuerySuggestions';
 import { Button } from '../components/Button';
 import { cn } from '../utils/cn';
 
 interface QuerySuggestionsProps {
-  pool: Pool;
+  pool: pg.Pool;
   tables: TableNode[];
   relationships: RelationshipEdge[];
   recentQueries?: string[];

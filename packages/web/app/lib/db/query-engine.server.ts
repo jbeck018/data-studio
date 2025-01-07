@@ -1,4 +1,4 @@
-import type { Pool, PoolClient, QueryResult as PgQueryResult } from 'pg';
+import pg from 'pg';
 import type { Parser } from 'node-sql-parser';
 import type { QueryResult, QueryMetrics, QueryField, DatabaseValue } from '../../types';
 import { sanitizeQuery } from '~/utils/sql-sanitizer.server';
@@ -19,8 +19,8 @@ export interface QueryError {
 
 export class QueryEngine {
   private static instance: QueryEngine;
-  private pool: Pool | null = null;
-  private client: PoolClient | null = null;
+  private pool: pg.Pool | null = null;
+  private client: pg.PoolClient | null = null;
   private parser: Parser;
 
   private constructor() {

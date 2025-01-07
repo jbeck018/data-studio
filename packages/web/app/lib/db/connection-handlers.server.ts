@@ -1,4 +1,4 @@
-import { Client as PgClient } from 'pg';
+import pg from 'pg';
 import { createConnection as createMySQLConnection, Connection } from 'mysql2/promise';
 import { MongoClient, Db } from 'mongodb';
 import { createClient, RedisClientType } from 'redis';
@@ -62,11 +62,11 @@ export abstract class BaseConnection {
 }
 
 export class PostgresConnection extends BaseConnection {
-  protected client!: PgClient;
+  protected client!: pg.Client;
 
   async connect(): Promise<void> {
     try {
-      this.client = new PgClient({
+      this.client = new pg.Client({
         host: this.config.host,
         port: this.config.port,
         database: this.config.database,

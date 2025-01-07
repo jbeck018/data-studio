@@ -1,5 +1,4 @@
-import pkg from 'pg';
-const { Pool } = pkg;
+import pg from 'pg';
 
 export async function testPostgresConnection(config: {
   host: string;
@@ -9,7 +8,7 @@ export async function testPostgresConnection(config: {
   password: string;
   ssl?: boolean;
 }) {
-  const pool = new Pool(config);
+  const pool = new pg.Pool(config);
   try {
     const client = await pool.connect();
     client.release();

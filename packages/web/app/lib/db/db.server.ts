@@ -1,12 +1,11 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Client } from 'pg';
+import pg from 'pg';
 import * as schema from './schema';
 
 import { env } from '../../env.server';
 
 // Create system database connection pool
-const pool = new Client({
+const pool = new pg.Client({
   host: env.SYSTEM_DB_HOST,
   port: env.SYSTEM_DB_PORT,
   user: env.SYSTEM_DB_USER,
