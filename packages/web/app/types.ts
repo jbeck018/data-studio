@@ -1,5 +1,6 @@
-import type { User, Organization, Role, OrganizationMembership } from '~/lib/db/schema/auth';
-import type { DatabaseConnection, ConnectionConfig, ConnectionPermission } from '~/lib/db/schema/connections';
+import type { DatabaseConnection } from '~/lib/db/schema/connections';
+import { OrganizationMembership, Role } from './lib/db/schema';
+import { Organization, User } from './lib/db/schema';
 
 // Database value type
 export type DatabaseValue = string | number | boolean | null | Record<string, unknown>;
@@ -55,11 +56,16 @@ export interface QueryMetrics {
 
 // Query result
 export interface QueryResult {
-  fields: QueryField[];
-  rows: Record<string, DatabaseValue>[];
+  queryId?: string;
+  rows: any[];
   rowCount: number;
+  executionTime: number;
+  fields: Array<{name: string, type: string, dataType: string}>;
   metrics: QueryMetrics;
-  executionTime?: number;
+  columns: Array<{
+    name: string;
+    dataTypeId: number;
+  }>;
 }
 
 // Database client
@@ -67,6 +73,7 @@ export interface DatabaseClient {
   query: (sql: string, params?: QueryParams[]) => Promise<QueryResult>;
   close: () => Promise<void>;
   testConnection: () => Promise<boolean>;
+  connect: () => Promise<void>;
 }
 
 // Node types for schema visualization

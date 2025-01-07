@@ -1,16 +1,15 @@
 import { redirect } from "@remix-run/node";
 import { requireUser } from "./auth.server";
-import type { Role } from "~/lib/db/schema/types";
-import { ROLE_LEVELS } from "~/lib/db/schema/types";
+import { Role, ROLE_LEVELS } from "../db/schema";
 
 export async function requireRole(request: Request, requiredRole: Role) {
   const user = await requireUser(request);
 
   // Get the highest role from user's organization memberships
-  const highestRole = user.organizationMemberships?.reduce((highest, membership) => {
+  const highestRole = user.organizationMemberships?.reduce((highest: Role, membership) => {
     const currentRoleLevel = ROLE_LEVELS[membership.role as Role];
-    const highestRoleLevel = ROLE_LEVELS[highest as Role];
-    return currentRoleLevel > highestRoleLevel ? membership.role : highest;
+    const highestRoleLevel = ROLE_LEVELS[highest];
+    return (currentRoleLevel > highestRoleLevel ? membership.role : highest) as Role;
   }, "VIEWER" as Role);
 
   if (!highestRole) {
@@ -18,7 +17,7 @@ export async function requireRole(request: Request, requiredRole: Role) {
   }
 
   const requiredRoleLevel = ROLE_LEVELS[requiredRole];
-  const userRoleLevel = ROLE_LEVELS[highestRole];
+  const userRoleLevel = ROLE_LEVELS[highestRole as Role];
 
   if (userRoleLevel < requiredRoleLevel) {
     throw redirect("/unauthorized");

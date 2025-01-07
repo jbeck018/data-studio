@@ -1,5 +1,5 @@
-import type { TableNode, RelationshipEdge } from '../types/schema';
-import type { PgAI } from './pgAI';
+import type { TableNode, RelationshipEdge, ProcessedSchemaTable } from '../types/schema';
+import type { PgAI, RelationshipInfo } from './pgAI';
 import { QueryTemplateProcessor, TemplateContext, ExtractedValues } from './queryPatterns';
 
 export interface QueryContext {
@@ -60,7 +60,7 @@ export class QueryGenerator {
   public async updateSchemaContext(tables: TableNode[], relationships: RelationshipEdge[]): Promise<void> {
     this.tables = tables;
     this.relationships = relationships;
-    await this.pgAI.updateSchemaEmbeddings(tables, relationships);
+    await this.pgAI.updateSchemaEmbeddings(tables as ProcessedSchemaTable[], relationships as unknown as RelationshipInfo[]);
   }
 
   /**

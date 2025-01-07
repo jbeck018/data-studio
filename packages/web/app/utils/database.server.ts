@@ -1,4 +1,3 @@
-import { Pool, PoolClient, QueryResult as PgQueryResult } from 'pg';
 import { ConnectionManager } from '../lib/db/connection-manager.server';
 import type { QueryField, QueryResult, TableSchema, ForeignKeySchema } from '../types/query';
 
@@ -55,11 +54,11 @@ export async function withConnection<T>(
   organizationId: string,
   callback: (connection: any) => Promise<T>
 ): Promise<T> {
-  const connection = await connectionManager.getConnection(connectionId, organizationId);
+  const connection = await connectionManager.getConnection(connectionId);
   try {
     return await callback(connection);
   } finally {
-    await connectionManager.releaseConnection(connectionId);
+    await connectionManager.resetConnection(connectionId);
   }
 }
 
@@ -116,7 +115,6 @@ export async function fetchDatabaseSchema(
           isNullable: row.is_nullable === 'YES',
           nullable: row.is_nullable === 'YES',
           defaultValue: row.column_default,
-          comment: row.column_comment
         });
       }
     });
@@ -135,7 +133,7 @@ export async function executeQuery(
     const result = await connection.query(sql);
 
     return {
-      fields: result.fields.map(field => ({
+      fields: result.fields.map((field: { name: string; dataTypeID: number; tableID?: number; columnID?: number; format?: string }) => ({
         name: field.name,
         dataType: field.dataTypeID.toString(),
         tableId: field.tableID?.toString(),

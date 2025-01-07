@@ -19,6 +19,7 @@ export interface ConnectionConfig {
 	password?: string | null;
 	ssl?: boolean | null;
 	filepath?: string | null;
+	organizationId: string;
 }
 
 export interface ConnectionWithStatus extends DatabaseConnection {
@@ -64,6 +65,7 @@ export interface OrganizationWithRole extends Organization {
 export interface UserWithOrganization extends User {
 	organizationMemberships?: OrganizationMembership[];
 	currentOrganization?: Organization;
+	organization?: Organization;
 }
 
 export interface Permission {

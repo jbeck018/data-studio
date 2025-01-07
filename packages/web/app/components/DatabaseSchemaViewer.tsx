@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { TableSchema } from "~/types";
+import { DatabaseTableSchema } from "~/utils/database.server";
 
 interface TableStructureProps {
   table: TableSchema;
@@ -51,19 +52,31 @@ function TableStructure({ table }: TableStructureProps) {
   );
 }
 
-export function DatabaseSchemaViewer({ table }: { table: TableSchema }) {
+interface DatabaseSchemaViewerProps {
+  schemas: DatabaseTableSchema[];
+}
+
+export function DatabaseSchemaViewer({ schemas }: DatabaseSchemaViewerProps) {
+  const [selectedTable, setSelectedTable] = useState<DatabaseTableSchema | null>(schemas[0] || null);
+
   return (
     <div className="flex h-full">
       <div className="w-1/3 border-r p-4">
         <h2 className="text-lg font-semibold mb-4">Tables</h2>
         <div className="space-y-2">
-          <div className="p-2 bg-gray-100 rounded">
-            {table.name}
-          </div>
+          {schemas.map((schema) => (
+            <div 
+              key={schema.name}
+              className="p-2 bg-gray-100 rounded cursor-pointer"
+              onClick={() => setSelectedTable(schema)}
+            >
+              {schema.name}
+            </div>
+          ))}
         </div>
       </div>
       <div className="w-2/3 p-4 overflow-y-auto">
-        <TableStructure table={table} />
+        {selectedTable && <TableStructure table={selectedTable as TableSchema} />}
       </div>
     </div>
   );

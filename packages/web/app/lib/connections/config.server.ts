@@ -127,7 +127,7 @@ export class ConnectionConfigManager {
     const connection = await db.query.databaseConnections.findFirst({
       where: eq(databaseConnections.id, id),
     });
-    return connection;
+    return connection as DatabaseConnection;
   }
 
   async getConnectionsByOrganization(organizationId: string): Promise<DatabaseConnection[]> {
@@ -253,6 +253,11 @@ export async function getConnection(id: string, organizationId: string): Promise
   return connection;
 }
 
+export async function deleteConnection(id: string, organizationId: string): Promise<void> {
+  const manager = new ConnectionConfigManager();
+  return await manager.deleteConnection(id);
+}
+
 export async function listConnections(organizationId: string): Promise<DatabaseConnection[]> {
   const manager = new ConnectionConfigManager();
   return manager.getConnectionsByOrganization(organizationId);
@@ -261,7 +266,7 @@ export async function listConnections(organizationId: string): Promise<DatabaseC
 export async function testConnection(input: ConnectionInput): Promise<boolean> {
   const config: ConnectionConfig = {
     ...input,
-    organizationId: '', // This will be set by the calling function
+    organizationId: '',
     host: input.host ?? null,
     port: input.port ?? null,
     database: input.database ?? null,

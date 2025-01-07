@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { users } from './auth';
+import { Role, users } from './users';
 
 export const organizations = pgTable('organizations', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -49,5 +49,6 @@ export type OrganizationWithMembers = Organization & {
 
 export type OrganizationWithRole = Organization & {
   role: Role;
+  members: OrganizationMembership[];
 };
 

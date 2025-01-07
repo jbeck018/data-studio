@@ -156,8 +156,9 @@ export class WebSocketManager {
   }
 
   public send(userId: string, message: WebSocketMessage) {
-    this.wss.clients.forEach((client: AuthenticatedWebSocket) => {
-      if (client.userId === userId) {
+    this.wss.clients.forEach((client) => {
+      const authClient = client as AuthenticatedWebSocket;
+      if (authClient.userId === userId) {
         client.send(JSON.stringify(message));
       }
     });

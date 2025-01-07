@@ -167,7 +167,7 @@ export function PermissionManager({ connectionId, users, currentPermissions }: P
                 value={restrictions.maxRowsPerQuery || ''}
                 onChange={(e) => setRestrictions({
                   ...restrictions,
-                  maxRowsPerQuery: parseInt(e.target.value) || undefined,
+                  maxRowsPerQuery: Number.parseInt(e.target.value) || undefined,
                 })}
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
@@ -182,7 +182,7 @@ export function PermissionManager({ connectionId, users, currentPermissions }: P
                 value={restrictions.maxConcurrentQueries || ''}
                 onChange={(e) => setRestrictions({
                   ...restrictions,
-                  maxConcurrentQueries: parseInt(e.target.value) || undefined,
+                  maxConcurrentQueries: Number.parseInt(e.target.value) || undefined,
                 })}
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
@@ -190,20 +190,20 @@ export function PermissionManager({ connectionId, users, currentPermissions }: P
           </div>
 
           <div>
-            <label className="block text-sm text-gray-700">
+            <label htmlFor="allowedOperations" className="block text-sm text-gray-700">
               Allowed Operations
               <div className="mt-2 space-x-4">
                 {['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER'].map((op) => (
                   <label key={op} className="inline-flex items-center">
                     <input
                       type="checkbox"
-                      checked={restrictions.allowedOperations?.includes(op as any) || false}
+                      checked={restrictions.allowedOperations?.includes(op) || false}
                       onChange={(e) => {
                         const ops = new Set(restrictions.allowedOperations || []);
                         if (e.target.checked) {
-                          ops.add(op as any);
+                          ops.add(op);
                         } else {
-                          ops.delete(op as any);
+                          ops.delete(op);
                         }
                         setRestrictions({
                           ...restrictions,

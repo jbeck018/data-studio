@@ -1,8 +1,8 @@
-import { type ActionFunctionArgs, type LoaderFunctionArgs, json, redirect } from "@remix-run/node";
+import { type ActionFunctionArgs, type LoaderFunctionArgs, json } from "@remix-run/node";
 import { Form, useActionData, useLoaderData } from "@remix-run/react";
 import { z } from "zod";
 import { Button } from "../components/ui/button";
-import { updateUser } from "../lib/auth/auth.server";
+import { getUserById, updateUser } from "../lib/auth/auth.server";
 import { requireUserId } from "../lib/auth/session.server";
 
 const UpdateProfileSchema = z.object({
@@ -39,12 +39,13 @@ interface ActionData {
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const user = await requireUserId(request);
+  const userId = await requireUserId(request);
+  const user = await getUserById(userId);
   return json({ user });
 }
 
 export async function action({ request }: ActionFunctionArgs) {
-  const user = await requireUserId(request);
+  const userId = await requireUserId(request);
   const formData = await request.formData();
   const name = formData.get("name");
   const email = formData.get("email");
@@ -68,11 +69,10 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   try {
-    await updateUser(user.id, {
+    await updateUser(userId, {
       name: result.data.name,
       email: result.data.email,
-      password: result.data.newPassword,
-      currentPassword: result.data.currentPassword,
+      hashedPassword: result.data.newPassword,
     });
 
     return json<ActionData>({ success: true });
@@ -117,7 +117,7 @@ export default function ProfilePage() {
                       type="text"
                       name="name"
                       id="name"
-                      defaultValue={user.name}
+                      defaultValue={user?.name}
                       className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 dark:bg-gray-900 sm:text-sm sm:leading-6"
                       aria-invalid={Boolean(actionData?.errors?.fieldErrors?.name)}
                       aria-describedby={actionData?.errors?.fieldErrors?.name ? "name-error" : undefined}
@@ -139,7 +139,7 @@ export default function ProfilePage() {
                       type="email"
                       name="email"
                       id="email"
-                      defaultValue={user.email}
+                      defaultValue={user?.email}
                       className="block w-full rounded-md border-0 py-1.5 text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 dark:bg-gray-900 sm:text-sm sm:leading-6"
                       aria-invalid={Boolean(actionData?.errors?.fieldErrors?.email)}
                       aria-describedby={actionData?.errors?.fieldErrors?.email ? "email-error" : undefined}

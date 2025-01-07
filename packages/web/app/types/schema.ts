@@ -18,6 +18,7 @@ export interface Column {
   nullable: boolean;
   isPrimaryKey: boolean;
   isForeignKey: boolean;
+  defaultValue?: string;
   references?: {
     table: string;
     column: string;

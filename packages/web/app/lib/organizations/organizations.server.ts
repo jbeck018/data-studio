@@ -1,7 +1,6 @@
 import { db } from "../db/db.server";
-import { organizations, organizationMemberships } from "../db/schema";
+import { organizations, organizationMemberships, OrganizationWithRole, Role, Organization } from "../db/schema";
 import { eq } from "drizzle-orm";
-import type { Organization, OrganizationWithRole, OrganizationMembership, Role } from "../db/schema/auth";
 
 export async function getOrganizationById(id: string): Promise<OrganizationWithRole | null> {
   const org = await db.query.organizations.findFirst({

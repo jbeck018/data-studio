@@ -404,3 +404,8 @@ export class SQLSanitizer {
 }
 
 export const sqlSanitizer = new SQLSanitizer();
+
+export function sanitizeTableName(name: string): string {
+  // Remove any non-alphanumeric characters except underscores
+  return name.replace(/[^a-zA-Z0-9_]/g, '');
+}

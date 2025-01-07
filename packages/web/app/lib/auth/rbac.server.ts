@@ -1,8 +1,7 @@
 import { db } from "~/lib/db/db.server";
 import { eq } from "drizzle-orm";
-import { users, organizations, organizationMemberships } from "~/lib/db/schema";
+import { organizations, organizationMemberships, ROLE_LEVELS } from "~/lib/db/schema";
 import type { Role, UserWithOrganization } from "~/lib/db/schema/types";
-import { ROLE_LEVELS } from "~/lib/db/schema/types";
 
 export async function getUserRole(userId: string, organizationId: string): Promise<Role | null> {
   const membership = await db.query.organizationMemberships.findFirst({
@@ -52,7 +51,7 @@ export async function getUsersInOrganization(organizationId: string) {
 export async function addUserToOrganization(
   userId: string,
   organizationId: string,
-  role: Role = "MEMBER"
+  role: Role
 ) {
   const existingMembership = await db.query.organizationMemberships.findFirst({
     where: (memberships) =>
@@ -69,7 +68,7 @@ export async function addUserToOrganization(
     .values({
       userId,
       organizationId,
-      role,
+      role: role || "MEMBER",
     })
     .returning();
 

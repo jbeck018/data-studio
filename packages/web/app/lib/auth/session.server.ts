@@ -3,6 +3,7 @@ import { db } from "~/lib/db/db.server";
 import { eq } from "drizzle-orm";
 import type { UserWithOrganization } from "~/lib/db/schema/types";
 import { getUserById } from "./auth.server";
+import { organizations } from "../db/schema";
 
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) {

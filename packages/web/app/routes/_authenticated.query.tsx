@@ -10,10 +10,10 @@ import { db } from "~/lib/db/db.server";
 import { databaseConnections } from "~/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { connectionManager } from "~/lib/db/connection-manager.server";
-import { DatabaseSelector } from "~/components/DatabaseSelector";
 import { DatabaseSchemaViewer } from "~/components/DatabaseSchemaViewer";
 import { QueryInterface } from "~/components/QueryInterface";
 import { StreamingQueryResults } from "~/components/StreamingQueryResults";
+import { ConnectionSelector } from "~/components/ConnectionSelector";
 
 export interface DatabaseTableSchema {
   name: string;
@@ -37,7 +37,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
 
   const connections = await db.query.databaseConnections.findMany({
-    where: eq(databaseConnections.organizationId, user.organization.id),
+    where: eq(databaseConnections.organizationId, user?.currentOrganization?.id || ''),
   });
 
   const activeConnectionId = connections[0]?.id || null;
@@ -133,11 +133,10 @@ export default function Query() {
         <Alert className="mb-4" variant="default">
           <AlertDescription>Please select a database connection to start querying</AlertDescription>
         </Alert>
-        <DatabaseSelector 
-          connections={connections}
-          selectedDatabases={[activeConnectionId!].filter(Boolean)}
-          onDatabaseSelect={(id) => submit({ connectionId: id }, { method: "get" })}
-          onDatabaseDeselect={() => {}}
+        <ConnectionSelector 
+          connections={connections as any}
+          activeConnectionId={activeConnectionId}
+          onConnectionChange={(id: string) => submit({ connectionId: id }, { method: "get" })}
         />
       </PageContainer>
     );
@@ -147,13 +146,13 @@ export default function Query() {
     <PageContainer>
       <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4">
         <div>
-          <DatabaseSchemaViewer schemas={activeSchema} />
+          <DatabaseSchemaViewer schemas={activeSchema as any} />
         </div>
         <div className="space-y-4">
           <QueryInterface
             isExecuting={isExecuting}
             onExecute={handleExecuteQuery}
-            error={actionData?.error}
+            error={actionData?.error || null}
             result={actionData?.result || null}
             connections={connections}
             activeConnectionId={activeConnectionId}
@@ -164,7 +163,7 @@ export default function Query() {
               <AlertDescription>{actionData.error}</AlertDescription>
             </Alert>
           )}
-          {actionData?.result && <StreamingQueryResults result={actionData.result} />}
+            {actionData?.result && <StreamingQueryResults result={actionData.result} />}
         </div>
       </div>
     </PageContainer>

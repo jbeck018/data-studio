@@ -3,15 +3,13 @@ import { Form, useActionData, useLoaderData, useNavigation } from "@remix-run/re
 import { Button } from "../components/ui/button";
 import { requireUser } from "../lib/auth/session.server";
 import { 
-  type ConnectionInput,
   ConnectionSchema, 
-  type DatabaseConnection,
-  deleteConnection, 
   getConnection, 
+  deleteConnection,
   testConnection, 
   updateConnection 
 } from "../lib/connections/config.server";
-import { DATABASE_TYPES } from "../lib/db/schema";
+import { DatabaseConnection, DATABASE_TYPES } from "~/lib/db/schema";
 
 interface ActionData {
   errors?: {
@@ -43,7 +41,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     throw new Error("No organization selected");
   }
 
-  const connection = await getConnection(params.id!, user.currentOrganization);
+  const connection = await getConnection(params.id!, user.currentOrganization.id);
   if (!connection) {
     throw new Response("Not Found", { status: 404 });
   }
@@ -61,7 +59,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const intent = formData.get("_action");
 
   if (intent === "delete") {
-    await deleteConnection(params.id!, user.currentOrganization);
+    await deleteConnection(params.id!, user.currentOrganization.id);
     return redirect("/connections");
   }
 
@@ -98,7 +96,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       });
     }
 
-    await updateConnection(params.id!, user.currentOrganization, result.data);
+    await updateConnection(params.id!, user.currentOrganization.id, result.data);
     return redirect("/connections");
   } catch (error) {
     return json<ActionData>(
@@ -118,26 +116,25 @@ export default function EditConnectionPage() {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
-  const config = connection.config;
   const initialValues = {
     name: connection.name,
     type: connection.type,
-    ...('host' in config ? {
-      host: config.host,
-      port: config.port?.toString() ?? '',
-      username: config.username ?? '',
-      password: config.password ?? '',
-      ssl: config.ssl ?? false,
+    ...('host' in connection ? {
+      host: connection.host,
+      port: connection.port?.toString() ?? '',
+      username: connection.username ?? '',
+      password: connection.password ?? '',
+      ssl: connection.ssl ?? false,
     } : {}),
-    ...('database' in config ? {
-      database: typeof config.database === 'number' ? String(config.database) : config.database ?? '',
+    ...('database' in connection ? {
+      database: typeof connection.database === 'number' ? String(connection.database) : connection.database ?? '',
     } : {}),
-    ...('filepath' in config ? {
-      filepath: config.filepath,
+    ...('filepath' in connection ? {
+      filepath: connection.filepath,
     } : {}),
-    ...('authSource' in config ? {
-      authSource: config.authSource ?? '',
-      replicaSet: config.replicaSet ?? '',
+    ...('authSource' in connection ? {
+      authSource: connection.authSource ?? '',
+      replicaSet: connection.replicaSet ?? '',
     } : {}),
   } as const;
 
@@ -194,7 +191,7 @@ export default function EditConnectionPage() {
                   type="text"
                   name="host"
                   id="host"
-                  defaultValue={initialValues.host}
+                  defaultValue={initialValues.host || ''}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 />
                 {actionData?.errors?.fieldErrors?.host && (
@@ -326,7 +323,6 @@ export default function EditConnectionPage() {
                 type="text"
                 name="filepath"
                 id="filepath"
-                defaultValue={initialValues.filepath}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               />
               {actionData?.errors?.fieldErrors?.filepath && (

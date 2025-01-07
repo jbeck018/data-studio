@@ -88,7 +88,16 @@ export function QueryResults({ result, isLoading }: QueryResultsProps) {
       </div>
       <RowDetailsSidebar
         row={selectedRow}
+        columns={result.fields.map(field => ({
+          name: field.name,
+          type: field.dataType,
+          nullable: true,
+          isPrimaryKey: false,
+          isForeignKey: false
+        }))}
+        isOpen={selectedRow !== null}
         onClose={() => setSelectedRow(null)}
+        formatCellValue={formatValue}
         fields={result.fields}
       />
     </div>

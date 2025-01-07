@@ -6,7 +6,7 @@ interface DatabaseSelectorProps {
   activeConnection: DatabaseConnection | null;
 }
 
-export function ConnectionSelector({ connections, activeConnection }: DatabaseSelectorProps) {
+export function DatabaseSelector({ connections, activeConnection }: DatabaseSelectorProps) {
   if (connections.length === 0) {
     return (
       <div className="flex items-center px-3 py-2 text-sm text-gray-500">

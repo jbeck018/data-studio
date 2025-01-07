@@ -1,9 +1,9 @@
-import { CompletionContext, CompletionResult, autocompletion } from '@codemirror/autocomplete';
+import { type CompletionContext, type CompletionResult, autocompletion } from '@codemirror/autocomplete';
 import { sql } from '@codemirror/lang-sql';
-import { Diagnostic, lintGutter, linter } from '@codemirror/lint';
-import { Compartment, Extension, StateEffect } from '@codemirror/state';
+import { type Diagnostic, lintGutter, linter } from '@codemirror/lint';
+import { Compartment, type Extension } from '@codemirror/state';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { EditorView, ViewUpdate } from '@codemirror/view';
+import { EditorView, type ViewUpdate } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from '../hooks/useTheme';
@@ -19,6 +19,9 @@ interface SQLEditorProps {
   databaseAliases?: { alias: string; connectionId: string }[];
   isExecuting?: boolean;
   value?: string;
+  height?: string | number;
+  placeholder?: string;
+  onError?: (error: string | null) => void;
 }
 
 // SQL Keywords for auto-completion
@@ -118,45 +121,43 @@ function getSQLCompletions(context: CompletionContext, schema?: TableSchema[], d
   };
 }
 
-function createSQLLinter() {
+function createSQLLinter(onError: (error: string | null) => void) {
   return linter((view) => {
     const text = view.state.doc.toString();
-    if (!text.trim()) return [];
+    if (!text.trim()) {
+      onError(null);
+      return [];
+    }
     
     const diagnostics: Diagnostic[] = [];
+    let errorMessage: string | null = null;
     
     // Basic SQL validation
     if (!text.toLowerCase().match(/^(select|insert|update|delete|create|drop|alter|with)/)) {
+      errorMessage = 'Query should start with a valid SQL command';
       diagnostics.push({
         from: 0,
         to: text.length,
         severity: 'warning',
-        message: 'Query should start with a valid SQL command'
+        message: errorMessage
       });
     }
 
     const singleQuotes = (text.match(/'/g) || []).length;
-    const doubleQuotes = (text.match(/"/g) || []).length;
     if (singleQuotes % 2 !== 0) {
+      errorMessage = 'Unmatched single quotes';
       diagnostics.push({
         from: 0,
         to: text.length,
         severity: 'error',
-        message: 'Unmatched single quotes'
-      });
-    }
-    if (doubleQuotes % 2 !== 0) {
-      diagnostics.push({
-        from: 0,
-        to: text.length,
-        severity: 'error',
-        message: 'Unmatched double quotes'
+        message: errorMessage
       });
     }
 
+    onError(errorMessage);
     return diagnostics;
   }, {
-    delay: 300  // Reduced delay for more responsive feedback
+    delay: 300
   });
 }
 
@@ -188,11 +189,16 @@ export function SQLEditor({
   databaseAliases,
   isExecuting = false,
   value: _value,
+  onError,
+  height = '200px',
+  placeholder,
 }: SQLEditorProps) {
   const { isDark } = useTheme();
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView>();
-  const sqlLinter = useMemo(() => createSQLLinter(), []);
+  const sqlLinter = useMemo(() => createSQLLinter((error: string | null) => {
+    onError?.(error);
+  }), [onError]);
   const isInternalChange = useRef(false);
   const [value, setValue] = useState(_value || defaultValue);
 
@@ -221,7 +227,7 @@ export function SQLEditor({
       }),
       EditorView.theme({
         '&': {
-          height: '200px',
+          height: height,
         },
       }),
       themeCompartment.of(isDark ? oneDark : lightTheme),

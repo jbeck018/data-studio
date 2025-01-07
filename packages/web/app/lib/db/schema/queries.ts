@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, uuid, integer, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { users } from "./auth";
+import { users } from "./users";
 import { databaseConnections } from "./connections";
 
 export const queryHistory = pgTable("query_history", {

@@ -2,10 +2,10 @@ import { json, redirect } from "@remix-run/node";
 import { Outlet, useLoaderData } from "@remix-run/react";
 import { getUser } from "../lib/auth/session.server";
 import type { LoaderFunctionArgs } from "@remix-run/node";
-import AuthenticatedLayout from "../components/AuthenticatedLayout";
+import { AuthenticatedLayout } from "../components/AuthenticatedLayout";
 import type { User } from "../lib/auth/types";
 import { listConnections } from "../lib/connections/config.server";
-import type { DatabaseConnection } from "../lib/connections/config.server";
+import type { DatabaseConnection } from "../lib/db/schema";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await getUser(request);
@@ -16,25 +16,17 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   // If user has no organizations, redirect to create one
-  if (user.organizations.length === 0) {
+  if (!user.currentOrganization) {
     return redirect("/organizations/new");
   }
   // Get connections for the current organization
-  const connections = await listConnections(user.currentOrganization);
+  const connections = await listConnections(user.currentOrganization.id);
   return json({ user, connections });
 }
 
-type LoaderData = {
-  user: User;
-  connections: DatabaseConnection[];
-};
-
 export default function AuthenticatedRoot() {
-  const { user, connections } = useLoaderData<LoaderData>();
   
   return (
-    <AuthenticatedLayout user={user as unknown as User} connections={connections as unknown as DatabaseConnection[]}>
-      <Outlet />
-    </AuthenticatedLayout>
+    <AuthenticatedLayout />
   );
 }

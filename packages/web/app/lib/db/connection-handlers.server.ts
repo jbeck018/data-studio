@@ -142,7 +142,7 @@ export class MySQLConnection extends BaseConnection {
         database: this.config.database,
         user: this.config.username,
         password: this.config.password,
-        ssl: this.config.ssl,
+        ssl: this.config.ssl === true ? {} : this.config.ssl || undefined
       };
       this.client = await createMySQLConnection(config);
     } catch (error) {

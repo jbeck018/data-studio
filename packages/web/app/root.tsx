@@ -12,24 +12,34 @@ import styles from "./tailwind.css";
 import { ThemeProvider } from "./utils/theme";
 import Layout from "./components/Layout";
 import { loader as connectionLoader } from "./routes/connections.state";
+import { DatabaseConnection } from "./lib/db/schema";
+
+interface LoaderData {
+  ENV: {
+    NODE_ENV: string;
+  };
+  connections: DatabaseConnection[];
+  activeConnection: DatabaseConnection | null | undefined;
+}
 
 export const links: any = () => [
   { rel: "stylesheet", href: styles },
   { rel: "icon", type: "image/svg+xml", href: "/assets/favicon.svg" },
 ];
 
-export async function loader({ request }: any) {
+export const loader: LoaderFunction = async ({ request }) => {
   const connectionState = await connectionLoader({ request, params: {}, context: {} });
-  const { connections, activeConnection } = connectionState;
+  const data = await connectionState.json();
+  const { connections, activeConnection } = data;
 
-  return json({
+  return json<LoaderData>({
     ENV: {
       NODE_ENV: process.env.NODE_ENV,
     },
     connections,
     activeConnection,
   });
-}
+};
 
 export default function App() {
   const { connections, activeConnection } = useLoaderData<typeof loader>();

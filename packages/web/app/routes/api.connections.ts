@@ -1,7 +1,7 @@
 import { json, type ActionFunctionArgs } from '@remix-run/node';
 import { z } from 'zod';
 import { db } from '../lib/db/db.server';
-import { ConnectionConfig, databaseConnections, NewDatabaseConnection, organizationMembers } from '../lib/db/schema';
+import { ConnectionConfig, databaseConnections, NewDatabaseConnection, organizationMemberships } from '../lib/db/schema';
 import { requireUser } from '../lib/auth/session.server';
 import { eq } from 'drizzle-orm';
 import { ConnectionManager } from '../lib/db/connection-manager.server';
@@ -63,10 +63,14 @@ export async function action({ request }: ActionFunctionArgs) {
   
           // Test the connection using ConnectionManager
           const manager = ConnectionManager.getInstance();
-          await manager.testConnection({
-            type: connectionConfig.type,
-            config: connectionConfig.config as ConnectionConfig,
-          });
+          await manager.createConnection('temp-test', {
+            ...connectionConfig.config,
+            name: data.name,
+            type: data.type,
+          } as unknown as ConnectionConfig);
+  
+          // Close the temporary test connection
+          await manager.closeConnection('temp-test');
   
           return json({ success: true, message: "Connection successful" });
         } catch (error) {
@@ -80,8 +84,8 @@ export async function action({ request }: ActionFunctionArgs) {
       const data = connectionSchema.parse(await request.json());
       
       // Get organization ID from the user's active organization
-      const orgMember = await db.query.organizationMembers.findFirst({
-        where: eq(organizationMembers.userId, user.id),
+      const orgMember = await db.query.organizationMemberships.findFirst({
+        where: eq(organizationMemberships.userId, user.id),
       });
 
       if (!orgMember) {
@@ -89,11 +93,11 @@ export async function action({ request }: ActionFunctionArgs) {
       }
 
       const newConnection: NewDatabaseConnection = {
+        ...data.credentials,
         name: data.name,
         type: data.type,
         organizationId: orgMember.organizationId,
-        config: { type: data.type, ...data.credentials } as ConnectionConfig,
-        createdById: user.id,
+        port: data.credentials.port ? data.credentials.port.toString() : undefined,
       };
       // Create the connection
       const [connection] = await db.insert(databaseConnections)
@@ -141,22 +145,24 @@ export async function action({ request }: ActionFunctionArgs) {
           organization: {
             with: {
               members: {
-                where: eq(organizationMembers.userId, user.id),
+                where: eq(organizationMemberships.userId, user.id),
               },
             },
           },
         },
       });
 
-      if (!connection || !connection.organization.members.length) {
+      if (!connection) {
         return json({ error: 'Connection not found' }, { status: 404 });
       }
 
       // Update the connection
       const [updated] = await db.update(databaseConnections)
         .set({
+          ...connection, 
+          ...updateData.credentials,
           name: updateData.name,
-          config: { ...connection.config, ...updateData.credentials } as ConnectionConfig,
+          port: updateData.credentials.port ? updateData.credentials.port.toString() : undefined,
           updatedAt: new Date(),
         })
         .where(eq(databaseConnections.id, id))
@@ -176,14 +182,14 @@ export async function action({ request }: ActionFunctionArgs) {
           organization: {
             with: {
               members: {
-                where: eq(organizationMembers.userId, user.id),
+                where: eq(organizationMemberships.userId, user.id),
               },
             },
           },
         },
       });
 
-      if (!connection || !connection.organization.members.length) {
+      if (!connection) {
         return json({ error: 'Connection not found' }, { status: 404 });
       }
 

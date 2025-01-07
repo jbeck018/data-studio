@@ -2,19 +2,18 @@ import { useEffect, useState } from "react";
 import type { QueryResult } from "~/types";
 import { DataGrid, type Column } from "./DataGrid";
 
-interface StreamingQueryResultsProps {
-  queryId: string;
-  onError?: (error: string) => void;
+export interface StreamingQueryResultsProps {
+  result: QueryResult;
 }
 
-export function StreamingQueryResults({ queryId, onError }: StreamingQueryResultsProps) {
-  const [result, setResult] = useState<QueryResult | null>(null);
+export function StreamingQueryResults({ result: initialResult }: StreamingQueryResultsProps) {
+  const [result, setResult] = useState<QueryResult>(initialResult);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!queryId) return;
+    if (!result.queryId || !result.rowCount) return;
 
-    const eventSource = new EventSource(`/api/query/${queryId}/stream`);
+    const eventSource = new EventSource(`/api/query/${result.queryId}/stream`);
 
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -24,14 +23,13 @@ export function StreamingQueryResults({ queryId, onError }: StreamingQueryResult
     eventSource.onerror = () => {
       const errorMessage = "Error streaming query results";
       setError(errorMessage);
-      if (onError) onError(errorMessage);
       eventSource.close();
     };
 
     return () => {
       eventSource.close();
     };
-  }, [queryId, onError]);
+  }, [result.queryId]);
 
   if (error) {
     return <div className="text-red-500">{error}</div>;

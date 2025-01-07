@@ -8,7 +8,7 @@ import { Button } from "../components/ui/button";
 import { requireUser } from "../lib/auth/session.server";
 import { ConnectionManager } from "../lib/db/connection-manager.server";
 import { db } from "../lib/db/db.server";
-import { databaseConnections } from "../lib/db/schema";
+import { databaseConnections, NewDatabaseConnection } from "../lib/db/schema";
 import { testPostgresConnection } from "../lib/db/test-connection.server";
 import { getOrganizationRole } from "../lib/organizations/organizations.server";
 
@@ -24,14 +24,14 @@ const ConnectionSchema = z.object({
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
-  const role = await getOrganizationRole(params.orgId!, user.id);
+  const role = await getOrganizationRole(params.orgId || '', user.id);
   
   if (!role) {
     throw new Response("Unauthorized", { status: 403 });
   }
 
   const connections = await db.query.databaseConnections.findMany({
-    where: eq(databaseConnections.organizationId, params.orgId!),
+    where: eq(databaseConnections.organizationId, params.orgId || ''),
   });
 
   return json({ connections, role });
@@ -39,9 +39,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 export async function action({ request, params }: ActionFunctionArgs) {
   const user = await requireUser(request);
-  const role = await getOrganizationRole(params.orgId!, user.id);
+  const role = await getOrganizationRole(params.orgId || '', user.id);
   
-  if (!role || role === "member") {
+  if (!role || role === "MEMBER") {
     throw new Response("Unauthorized", { status: 403 });
   }
 
@@ -70,16 +70,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
       try {
         await testPostgresConnection(config);
       } catch (error) {
-        return json({ error: `Failed to connect: ${error.message}` }, { status: 400 });
+        return json({ error: `Failed to connect: ${(error as Record<string, string>).message}` }, { status: 400 });
       }
 
-      await db.insert(databaseConnections).values({
-        name,
-        type: "postgresql",
-        organizationId: params.orgId!,
-        createdById: user.id,
-        config,
-      });
+      await db.insert(databaseConnections).values(config as unknown as NewDatabaseConnection);
 
       return null;
     }
@@ -108,11 +102,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
       try {
         const pool = await ConnectionManager.getInstance().getConnection(connectionId);
+        if (!pool) {
+          throw new Error("Could not establish connection");
+        }
         const client = await pool.connect();
-        client.release();
+        await (client as any).release();
         return json({ success: true });
       } catch (error) {
-        return json({ error: error.message }, { status: 400 });
+        return json({ error: (error as Record<string, string>).message }, { status: 400 });
       }
     }
 
@@ -123,7 +120,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 export default function ConnectionsPage() {
   const { connections, role } = useLoaderData<typeof loader>();
-  const canManage = role === "owner" || role === "admin";
+  const canManage = role === "OWNER" || role === "ADMIN";
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -152,7 +149,7 @@ export default function ConnectionsPage() {
                 <div>
                   <h2 className="text-lg font-medium mb-1">{connection.name}</h2>
                   <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
-                    {connection.config.host}:{connection.config.port}/{connection.config.database}
+                    {connection.host}:{connection.port}/{connection.database}
                   </p>
                 </div>
                 {canManage && (
@@ -186,7 +183,7 @@ export default function ConnectionsPage() {
                 )}
               </div>
               <div className="mt-4 text-sm text-light-text-secondary dark:text-dark-text-secondary">
-                <p>Created by {connection.createdBy.name}</p>
+                {/* <p>Created by {connection.createdBy.name}</p> */}
                 <p>Last used: {connection.lastUsedAt ? new Date(connection.lastUsedAt).toLocaleString() : 'Never'}</p>
               </div>
             </div>

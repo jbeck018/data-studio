@@ -1,6 +1,7 @@
 import { type ActionFunctionArgs, json } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 import { createUserSession, login } from "~/lib/auth";
+import { getUser } from "~/lib/auth/session.server";
 import { Button } from "../components/ui/button";
 
 interface LoginActionData {

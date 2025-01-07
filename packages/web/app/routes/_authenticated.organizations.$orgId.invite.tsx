@@ -1,20 +1,10 @@
-import { json, redirect } from "@remix-run/node";
+import { json, redirect } from "@remix-run/react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useParams } from "@remix-run/react";
-import { eq } from "drizzle-orm";
-import { z } from "zod";
 import { Button } from "../components/ui/button";
 import { requireOrganizationRole } from "../lib/auth/session.server";
 import { db } from "../lib/db/db.server";
-import { Role } from '../lib/db/permissions-manager.server';
-import { organizationMembers, users } from "../lib/db/schema";
-
-const InviteUserSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  role: z.enum(["ADMIN", "MEMBER"], {
-    required_error: "Role is required",
-  }),
-});
+import { organizationMemberships, Role } from "~/lib/db/schema";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   // Only admins can invite users
@@ -50,9 +40,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
       );
     }
 
-    await db.insert(organizationMembers).values({
+    await db.insert(organizationMemberships).values({
       userId: user.id,
-      organizationId: orgId,
+      organizationId: orgId as string,
       role: role.toLowerCase() as Role,
     });
 
@@ -81,8 +71,20 @@ export async function action({ request, params }: ActionFunctionArgs) {
   }
 }
 
+interface ActionData {
+  errors?: {
+    formErrors?: string[];
+    fieldErrors?: {
+      email?: string;
+      role?: string;
+    };
+  };
+  tested?: boolean;
+}
+
+
 export default function InviteUserPage() {
-  const actionData = useActionData<typeof action>();
+  const actionData = useActionData<ActionData>();
   const params = useParams();
 
   return (
@@ -153,7 +155,7 @@ export default function InviteUserPage() {
             </p>
           </div>
 
-          {actionData?.errors?.formErrors?.length > 0 && (
+          {actionData?.errors?.formErrors && actionData?.errors?.formErrors?.length > 0 && (
             <div className="rounded-md bg-red-50 p-4 dark:bg-red-900">
               <div className="flex">
                 <div className="ml-3">
@@ -162,7 +164,7 @@ export default function InviteUserPage() {
                   </h3>
                   <div className="mt-2 text-sm text-red-700 dark:text-red-300">
                     <ul className="list-disc space-y-1 pl-5">
-                      {actionData.errors.formErrors.map((error) => (
+                      {actionData?.errors?.formErrors?.map((error) => (
                         <li key={error}>{error}</li>
                       ))}
                     </ul>

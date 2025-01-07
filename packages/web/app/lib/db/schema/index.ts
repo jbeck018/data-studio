@@ -2,40 +2,23 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 // Import all schemas
-import * as auth from "./auth";
 import * as connections from "./connections";
 import * as queries from "./queries";
 import * as audit from "./audit";
+import * as organization from "./organizations";
+import * as user from "./users";
 
 // Re-export specific types to avoid ambiguity
-export {
-  User,
-  Organization,
-  OrganizationMembership,
-  Role,
-  type NewUser,
-  type NewOrganization,
-  type NewOrganizationMembership
-} from "./auth";
 
-export {
-  ConnectionType,
-  type ConnectionConfig,
-  type DatabaseConnection,
-  type NewDatabaseConnection,
-  type ConnectionPermission,
-  type NewConnectionPermission
-} from "./connections";
+export * from "./connections";
 
-export {
-  type QueryHistory,
-  type NewQueryHistory
-} from "./queries";
+export * from "./queries";
 
-export {
-  type AuditLog,
-  type NewAuditLog
-} from "./audit";
+export * from "./audit";
+
+export * from "./organizations";
+
+export * from "./users";
 
 // Database connection types
 export const DATABASE_TYPES = [
@@ -63,10 +46,11 @@ const pool = new Pool({
 // Create database instance
 export const db = drizzle(pool, {
   schema: {
-    ...auth,
     ...connections,
     ...queries,
     ...audit,
+    ...organization,
+    ...user,
   },
 });
 
@@ -79,8 +63,9 @@ export const {
   queryHistory,
   auditLog,
 } = {
-  ...auth,
   ...connections,
   ...queries,
   ...audit,
+  ...organization,
+  ...user,
 };

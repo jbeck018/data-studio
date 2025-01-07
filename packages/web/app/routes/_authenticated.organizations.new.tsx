@@ -56,16 +56,14 @@ export async function action({ request }: ActionFunctionArgs) {
       return json<ActionData>({ errors: result.error.flatten() }, { status: 400 });
     }
 
-    const organization = await createOrganization({
-      name: result.data.name,
-      slug: result.data.slug,
-      description: result.data.description,
-      userId: user.id,
-    });
+    const organization = await createOrganization(
+      result.data.name,
+      user.id,
+    );
 
     console.log('Organization created:', organization);
 
-    return redirect(`/organizations/${organization.slug}`);
+    return redirect(`/organizations/${organization.id}`);
   } catch (error) {
     console.error('Error creating organization:', error);
     return json<ActionData>({

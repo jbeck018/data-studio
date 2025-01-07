@@ -1,7 +1,6 @@
 import { db } from './db.server';
 import { eq, and } from 'drizzle-orm';
 import { connectionPermissions } from './schema/permissions';
-import { organizationMembers } from './schema/organizations';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface ConnectionPermission {
@@ -15,6 +14,7 @@ export interface ConnectionPermission {
   canWrite: boolean;
   canDelete: boolean;
   canGrant: boolean;
+  queryRestrictions?: QueryRestrictions;
 }
 
 export type SQLOperation = 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'CREATE' | 'DROP' | 'ALTER';
@@ -83,7 +83,10 @@ export class PermissionsManager {
       )
       .limit(1);
 
-    return result[0] || null;
+    return result[0] ? {
+      ...result[0],
+      queryRestrictions: result[0].queryRestrictions ?? undefined
+    } : null;
   }
 
   async updateConnectionPermissions(
@@ -132,7 +135,10 @@ export class PermissionsManager {
       })
       .returning();
 
-    return permission;
+    return {
+      ...permission,
+      queryRestrictions: permission.queryRestrictions ?? undefined
+    };
   }
 
   async revokeConnectionPermission(
@@ -179,6 +185,38 @@ export class PermissionsManager {
         isValid: false,
         error: err.message
       };
+    }
+  }
+
+  async setConnectionPermissions(
+    connectionId: string,
+    userId: string,
+    organizationId: string,
+    permissions: {
+      isAdmin: boolean;
+      canConnect: boolean;
+      queryRestrictions: QueryRestrictions;
+    }
+  ): Promise<void> {
+    const existingPermission = await this.getConnectionPermissions(userId, organizationId, connectionId);
+
+    if (existingPermission) {
+      // Update existing permission
+      await this.updateConnectionPermissions(userId, organizationId, connectionId, {
+        canGrant: permissions.isAdmin,
+        canRead: permissions.canConnect,
+        canWrite: permissions.canConnect,
+        canDelete: permissions.canConnect,
+        queryRestrictions: permissions.queryRestrictions,
+      });
+    } else {
+      // Create new permission
+      await this.grantConnectionPermission(connectionId, userId, organizationId, {
+        canGrant: permissions.isAdmin,
+        canRead: permissions.canConnect,
+        canWrite: permissions.canConnect,
+        canDelete: permissions.canConnect,
+      });
     }
   }
 }

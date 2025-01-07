@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, uuid, boolean, jsonb } from 'drizzle-orm/pg-core';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { organizations } from './auth';
+import { organizations } from './organizations';
 
 // Connection type enum
 export const ConnectionType = z.enum(['POSTGRES', 'MYSQL', 'SQLITE', 'MSSQL', 'ORACLE', 'MONGODB', 'REDIS']);
@@ -35,6 +35,8 @@ export const databaseConnections = pgTable('database_connections', {
   password: text('password'),
   ssl: boolean('ssl'),
   filepath: text('filepath'),
+  authSource: text('auth_source'),
+  replicaSet: text('replica_set'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   lastUsedAt: timestamp('last_used_at')

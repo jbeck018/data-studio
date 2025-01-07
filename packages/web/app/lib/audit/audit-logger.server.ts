@@ -1,20 +1,14 @@
 import { db } from '../db/db.server';
 import { auditLog } from '../db/schema/audit';
-import type {
-  AuditEventType,
-  AuditEventStatus,
-  AuditEventMetadata,
-} from '../db/schema/audit';
 
 export class AuditLogger {
   private static instance: AuditLogger;
   private eventBuffer: Array<{
     userId: string;
-    organizationId: string;
-    eventType: AuditEventType;
-    eventStatus: AuditEventStatus;
-    description: string;
-    metadata?: AuditEventMetadata;
+    action: string;
+    resourceType: string;
+    resourceId: string;
+    metadata?: Record<string, any>;
   }>;
   private flushInterval: NodeJS.Timeout | null;
 
@@ -52,29 +46,29 @@ export class AuditLogger {
       await db.insert(auditLog).values(events);
     } catch (error) {
       console.error('Failed to flush audit events:', error);
-      // Put events back in buffer
       this.eventBuffer.unshift(...events);
     }
   }
 
   public async logEvent(
     userId: string,
-    organizationId: string,
-    eventType: AuditEventType,
-    eventStatus: AuditEventStatus,
+    resourceType: string,
+    resourceId: string,
+    action: string,
     description: string,
-    metadata?: AuditEventMetadata
+    metadata?: Record<string, any>
   ): Promise<void> {
     this.eventBuffer.push({
       userId,
-      organizationId,
-      eventType,
-      eventStatus,
-      description,
-      metadata,
+      action,
+      resourceType,
+      resourceId,
+      metadata: {
+        description,
+        ...metadata,
+      },
     });
 
-    // If buffer gets too large, flush immediately
     if (this.eventBuffer.length >= 100) {
       await this.flushEvents();
     }
@@ -82,10 +76,9 @@ export class AuditLogger {
 
   public async logQueryExecution(
     userId: string,
-    organizationId: string,
     connectionId: string,
     sql: string,
-    status: AuditEventStatus,
+    status: string,
     metadata: {
       rowCount?: number;
       executionTime?: number;
@@ -94,12 +87,12 @@ export class AuditLogger {
   ): Promise<void> {
     await this.logEvent(
       userId,
-      organizationId,
+      'connection',
+      connectionId,
       'QUERY_EXECUTION',
-      status,
       `Query execution ${status.toLowerCase()}`,
       {
-        connectionId,
+        status,
         sql,
         ...metadata,
       }
@@ -110,7 +103,7 @@ export class AuditLogger {
     userId: string,
     organizationId: string,
     connectionId: string,
-    status: AuditEventStatus,
+    status: string,
     metadata?: {
       errorMessage?: string;
       ipAddress?: string;
@@ -158,7 +151,7 @@ export class AuditLogger {
     userId: string,
     organizationId: string,
     description: string,
-    status: AuditEventStatus,
+    status: string,
     metadata?: {
       ipAddress?: string;
       userAgent?: string;
@@ -180,7 +173,7 @@ export class AuditLogger {
     userId: string,
     organizationId: string,
     description: string,
-    status: AuditEventStatus,
+    status: string,
     metadata?: {
       targetResource?: string;
       additionalInfo?: Record<string, any>;

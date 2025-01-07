@@ -5,13 +5,13 @@ import { db } from '../lib/db/db.server';
 import { requireUser } from '../lib/auth/auth.server';
 import { databaseConnections } from '../lib/db/schema';
 import { connectionPermissions } from '../lib/db/schema/permissions';
-import { users } from '../lib/db/schema/auth';
+import { users } from '../lib/db/schema/users';
 import { eq } from 'drizzle-orm';
 import { PermissionManager } from '../components/PermissionManager';
-import { permissionsManager } from '../lib/db/permissions-manager.server';
+import { permissionsManager, type QueryRestrictions } from '../lib/db/permissions-manager.server';
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
-  const { user, organizationId } = await requireUser(request);
+  const { organizationId } = await requireUser(request);
   const connectionId = params.id;
 
   if (!connectionId) {
@@ -60,13 +60,13 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       userId: p.userId,
       isAdmin: p.isAdmin,
       canConnect: p.canConnect,
-      queryRestrictions: p.queryRestrictions,
+      queryRestrictions: p.queryRestrictions as QueryRestrictions | undefined
     })),
   });
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
-  const { user, organizationId } = await requireUser(request);
+  const { organizationId } = await requireUser(request);
   const connectionId = params.id;
 
   if (!connectionId) {

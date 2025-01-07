@@ -5,7 +5,7 @@ import { connectionManager } from '../lib/db/connection-manager.server';
 import { auditLogger } from '../lib/audit/audit-logger.server';
 
 export async function action({ request }: ActionFunctionArgs) {
-  const { user, organizationId } = await requireUser(request);
+  const { organizationId, ...user } = await requireUser(request);
   const formData = await request.formData();
   const query = formData.get('query') as string;
   const connectionId = formData.get('connectionId') as string;
@@ -19,18 +19,13 @@ export async function action({ request }: ActionFunctionArgs) {
 
   try {
     const startTime = Date.now();
-    const connection = await connectionManager.getConnection(
-      connectionId,
-      user.id,
-      organizationId
+    await connectionManager.getConnection(
+      connectionId   
     );
 
     const result = await connectionManager.validateAndExecuteQuery(
-      connection,
+      connectionId,
       query,
-      user.id,
-      organizationId,
-      connectionId
     );
 
     const executionTime = Date.now() - startTime;
@@ -45,6 +40,18 @@ export async function action({ request }: ActionFunctionArgs) {
       executionTime,
     };
 
+    // Log successful query execution
+    await auditLogger.logQueryExecution(
+      user.id,
+      organizationId,
+      connectionId,
+      query,
+      { 
+        rowCount: formattedResult.rowCount,
+        executionTime
+      }
+    );
+
     return json(formattedResult);
   } catch (error) {
     await auditLogger.logQueryExecution(
@@ -52,9 +59,8 @@ export async function action({ request }: ActionFunctionArgs) {
       organizationId,
       connectionId,
       query,
-      'FAILURE',
-      {
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      { 
+        errorMessage: error instanceof Error ? error.message : 'Unknown error'
       }
     );
 

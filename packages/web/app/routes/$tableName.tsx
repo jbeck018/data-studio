@@ -7,10 +7,12 @@ import { RowDetailsSidebar } from "../components/RowDetailsSidebar";
 import { useCallback, useState } from "react";
 import { isNumber, startCase } from "lodash-es";
 import { useClient } from "../hooks/useClient";
-import type { TableDataResponse, Column } from "../types";
+import type { TableDataResponse } from "../types";
 import { fetchTableData } from "../utils/api.server";
 import { fetchSchema } from "../utils/api.server";
 import { useTableUpdates } from "../hooks/useTableUpdates";
+import { Column } from "~/types/schema";
+import { DataGrid } from "~/components/DataGrid";
 
 interface LoaderData {
   tableName: string;
@@ -143,8 +145,8 @@ export default function TablePage() {
           );
         }
         return (
-          <DataView
-            columns={columns}
+          <DataGrid
+            columns={columns as any}
             rows={liveData.data}
             sortBy={sortBy}
             sortOrder={sortOrder}
@@ -222,10 +224,15 @@ export default function TablePage() {
           </div>
           <RowDetailsSidebar
             row={selectedRow !== null ? liveData.data[selectedRow] : null}
-            columns={columns}
+            columns={columns as any}
             isOpen={selectedRow !== null}
             onClose={() => setSelectedRow(null)}
             formatCellValue={formatCellValue}
+            fields={columns.map(col => ({
+              name: col.name,
+              type: col.type,
+              dataType: col.type
+            }))}
           />
         </>
       </div>

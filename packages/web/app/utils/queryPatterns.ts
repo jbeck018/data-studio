@@ -130,7 +130,7 @@ export class QueryTemplateProcessor {
     // Replace table references
     context.tables.forEach(table => {
       const tableRegex = new RegExp(`{{\\s*${table.data.label}\\s*}}`, 'g');
-      sql = sql.replace(tableRegex, table.data.label);
+      sql = sql.replace(tableRegex, table.data.label as string);
       
       // Replace column references for this table
       table.data.columns.forEach(column => {
@@ -145,7 +145,7 @@ export class QueryTemplateProcessor {
       const targetTable = context.tables.find(t => t.id === rel.target);
       
       if (sourceTable && targetTable) {
-        const joinPattern = `${sourceTable.data.label}.${rel.data.sourceColumn} = ${targetTable.data.label}.${rel.data.targetColumn}`;
+        const joinPattern = `${sourceTable.data.label}.${rel?.data?.sourceColumn} = ${targetTable.data.label}.${rel?.data?.targetColumn}`;
         sql = sql.replace(`{{join:${sourceTable.data.label}:${targetTable.data.label}}}`, joinPattern);
       }
     });

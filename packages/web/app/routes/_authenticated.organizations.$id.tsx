@@ -16,7 +16,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     throw new Response("Invalid organization ID", { status: 400 });
   }
 
-  const organization = await getOrganization(result.data.id, user.id);
+  const organization = await getOrganization(result.data.id);
   if (!organization) {
     throw new Response("Organization not found", { status: 404 });
   }

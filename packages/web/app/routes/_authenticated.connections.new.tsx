@@ -68,7 +68,7 @@ export async function action({ request }: ActionFunctionArgs) {
     const connectionConfig = {
       name: validatedData.name,
       type: validatedData.type,
-      organizationId: user.currentOrganization.id,
+      organizationId: user?.currentOrganization?.id || '',
       createdById: user.id,
       archived: false,
       config: {
@@ -94,7 +94,7 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     // Insert the connection into the database
-    await createConnection(user.currentOrganization, user.id, connectionConfig as unknown as ConnectionInput);
+    await createConnection(user?.currentOrganization?.id || '', connectionConfig as unknown as ConnectionInput);
 
     return redirect("/connections");
   } catch (error) {
@@ -156,7 +156,9 @@ export default function NewConnectionPage() {
                 </div>
               )}
 
-              <Form method="post" onSubmit={form.handleSubmit((data) => {})}>
+              <Form method="post" onSubmit={form.handleSubmit((data) => {
+                // Empty callback is fine since we're using Remix's form handling
+              })} noValidate>
                 <ShadForm {...form}>
                   <div className="space-y-6">
                     <FormField
@@ -179,7 +181,11 @@ export default function NewConnectionPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Database Type</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value ?? undefined}
+                            defaultValue={field.value ?? undefined}
+                          >
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select a database type" />
@@ -209,7 +215,7 @@ export default function NewConnectionPage() {
                             <FormItem>
                               <FormLabel>Host</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <Input {...field} value={field.value || ''} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -225,7 +231,17 @@ export default function NewConnectionPage() {
                             <FormItem>
                               <FormLabel>Port</FormLabel>
                               <FormControl>
-                                <Input {...field} type="number" />
+                                <Input 
+                                  {...field}
+                                  type="number"
+                                  // Convert empty string to undefined and string to number
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    field.onChange(value === '' ? undefined : parseInt(value, 10));
+                                  }}
+                                  // Convert undefined to empty string for controlled input
+                                  value={field.value?.toString() ?? ''}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -241,7 +257,7 @@ export default function NewConnectionPage() {
                         <FormItem>
                           <FormLabel>Database Name</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} value={field.value || ''} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -255,7 +271,7 @@ export default function NewConnectionPage() {
                         <FormItem>
                           <FormLabel>Username</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} value={field.value || ''} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -269,7 +285,7 @@ export default function NewConnectionPage() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input {...field} type="password" />
+                            <Input {...field} type="password" value={field.value || ''} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -283,7 +299,7 @@ export default function NewConnectionPage() {
                         <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                           <FormControl>
                             <Checkbox
-                              checked={field.value}
+                              checked={field.value ?? false}
                               onCheckedChange={field.onChange}
                             />
                           </FormControl>
@@ -304,7 +320,7 @@ export default function NewConnectionPage() {
                         <FormItem>
                           <FormLabel>File Path</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} value={field.value || ''} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

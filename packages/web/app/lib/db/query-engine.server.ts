@@ -1,8 +1,8 @@
 import type { Pool, PoolClient, QueryResult as PgQueryResult } from 'pg';
 import type { Parser } from 'node-sql-parser';
-import type { DatabaseConnection } from '../schema/connections';
 import type { QueryResult, QueryMetrics, QueryField, DatabaseValue } from '../../types';
 import { sanitizeQuery } from '~/utils/sql-sanitizer.server';
+import { DatabaseConnection } from './schema';
 
 export interface QueryOptions {
   sql: string;
@@ -65,7 +65,7 @@ export class QueryEngine {
       throw new Error('Not connected to database');
     }
 
-    const sanitizedQuery = sanitizeQuery(options.sql);
+    const sanitizedQuery = await sanitizeQuery(options.sql);
 
     try {
       const startTime = Date.now();
@@ -86,6 +86,7 @@ export class QueryEngine {
       };
 
       return {
+        columns: [],
         fields,
         rows: result.rows,
         rowCount: result.rowCount || 0,

@@ -4,7 +4,7 @@ import { Form, useActionData, useParams } from "@remix-run/react";
 import { z } from "zod";
 import { Button } from "../components/ui/button";
 import { requireUser } from "../lib/auth/session.server";
-import { createDatabaseConnection } from "../lib/connections/pool.server";
+import { createConnection } from "~/lib/connections/config.server";
 
 const CreateConnectionSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -60,10 +60,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
   }
 
   try {
-    const connection = await createDatabaseConnection({
+    const connection = await createConnection(params.orgId!, {
       ...result.data,
-      organizationId: params.orgId!,
-      createdById: user.id,
+      port: result.data.port.toString(),
     });
 
     return redirect(`/organizations/${params.orgId}/connections/${connection.id}`);

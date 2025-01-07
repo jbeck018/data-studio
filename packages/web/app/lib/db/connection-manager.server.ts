@@ -1,22 +1,14 @@
-import type { Pool, PoolClient } from "pg";
-import type { MongoClient } from "mongodb";
-import type { RedisClientType } from "@redis/client";
-import type { Database } from "sqlite3";
 import type { FieldPacket } from "mysql2/promise";
 import { createPool } from "mysql2/promise";
-import type {
-  DatabaseConnection,
-  ConnectionConfig,
-  ConnectionType
-} from "../schema/connections";
 import type {
   QueryResult,
   QueryMetrics,
   QueryField,
   DatabaseClient,
   QueryParams,
-  DatabaseValue
+  DatabaseValue,
 } from "../../types";
+import { ConnectionConfig } from "./schema";
 
 interface ConnectionPool {
   [key: string]: DatabaseClient;
@@ -174,6 +166,7 @@ export class ConnectionManager {
           };
 
           return {
+            columns: [],
             fields,
             rows: result.rows,
             rowCount: result.rowCount || 0,
@@ -195,6 +188,10 @@ export class ConnectionManager {
         } catch (error) {
           return false;
         }
+      },
+      connect: async () => {
+        const client = await pool.connect();
+        client.release();
       }
     };
   }
@@ -217,8 +214,8 @@ export class ConnectionManager {
 
         const queryFields: QueryField[] = (fields as FieldPacket[]).map(field => ({
           name: field.name,
-          type: field.type.toString(),
-          dataType: field.type.toString()
+          type: field?.type?.toString() || "",
+          dataType: field?.type?.toString() || ""
         }));
 
         const metrics: QueryMetrics = {
@@ -228,8 +225,9 @@ export class ConnectionManager {
         };
 
         return {
+          columns: [],
           fields: queryFields,
-          rows: Array.isArray(rows) ? rows : [rows],
+          rows: Array.isArray(rows) ? rows as Record<string, DatabaseValue>[] : [rows] as unknown as Record<string, DatabaseValue>[],
           rowCount: Array.isArray(rows) ? rows.length : 1,
           metrics,
           executionTime: endTime - startTime
@@ -245,6 +243,10 @@ export class ConnectionManager {
         } catch (error) {
           return false;
         }
+      },
+      connect: async () => {
+        const connection = await pool.getConnection();
+        connection.release();
       }
     };
   }
@@ -271,8 +273,9 @@ export class ConnectionManager {
             };
 
             resolve({
+              columns: [],
               fields: [], // SQLite doesn't provide field metadata
-              rows: rows || [],
+              rows: (rows || []) as Record<string, DatabaseValue>[],
               rowCount: rows?.length || 0,
               metrics,
               executionTime: endTime - startTime
@@ -292,12 +295,19 @@ export class ConnectionManager {
         });
       },
       testConnection: async () => {
-        try {
-          await this.query("SELECT 1");
-          return true;
-        } catch (error) {
-          return false;
-        }
+        return new Promise((resolve) => {
+          db.all("SELECT 1", [], (error) => {
+            resolve(!error);
+          });
+        });
+      },
+      connect: async () => {
+        return new Promise((resolve, reject) => {
+          db.all("SELECT 1", [], (error) => {
+            if (error) reject(error);
+            else resolve();
+          });
+        });
       }
     };
   }
@@ -321,6 +331,9 @@ export class ConnectionManager {
         } catch (error) {
           return false;
         }
+      },
+      connect: async () => {
+        await client.db().command({ ping: 1 });
       }
     };
   }
@@ -347,6 +360,9 @@ export class ConnectionManager {
         } catch (error) {
           return false;
         }
+      },
+      connect: async () => {
+        await client.ping();
       }
     };
   }

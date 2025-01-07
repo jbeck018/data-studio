@@ -16,13 +16,13 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   }
 
   try {
-    const connection = await getConnection(connectionId, user.currentOrganization);
+    const connection = await getConnection(connectionId, user.currentOrganization.id);
     if (!connection) {
       throw new Error("Connection not found");
     }
 
     // Get the connection from the connection manager
-    const dbConnection = await connectionManager.getConnection(connection);
+    const dbConnection = await connectionManager.getConnection(connection.id);
     
     // Test if connection is alive
     const isAlive = await dbConnection.testConnection();

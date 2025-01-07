@@ -6,7 +6,7 @@ import { Button } from "../components/ui/button";
 import { requireUser } from "../lib/auth/session.server";
 import { setCurrentOrganization } from "../lib/auth/session.server";
 import { db } from "../lib/db/db.server";
-import { organizationMembers, organizations } from "../lib/db/schema";
+import { organizationMemberships } from "~/lib/db/schema";
 
 interface LoaderData {
   organizations: Array<{
@@ -29,8 +29,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   // Get all organizations the user is a member of
-  const userOrgs = await db.query.organizationMembers.findMany({
-    where: eq(organizationMembers.userId, user.id),
+  const userOrgs = await db.query.organizationMemberships.findMany({
+    where: eq(organizationMemberships.userId, user.id),
     with: {
       organization: true,
     },
@@ -55,8 +55,8 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   // Verify user is a member of the organization
-  const membership = await db.query.organizationMembers.findFirst({
-    where: eq(organizationMembers.userId, user.id),
+  const membership = await db.query.organizationMemberships.findFirst({
+    where: eq(organizationMemberships.userId, user.id),
     columns: {
       role: true,
     },

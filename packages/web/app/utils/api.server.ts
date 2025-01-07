@@ -2,6 +2,23 @@ import type { TableDataResponse, TableSchema, QueryResult } from '../types';
 import { pool } from './pool.server';
 import { sanitizeTableName } from './sql-sanitizer.server';
 
+interface SchemaQueryResult {
+  table_name: string;
+  column_name: string;
+  data_type: string;
+  is_nullable: string;
+  column_default: string | null;
+  constraint_type: string | null;
+  referenced_table_name: string | null;
+  referenced_column_name: string | null;
+  connection_id: string;
+}
+
+interface StatsQueryResult {
+  total_bytes: string;
+  row_count: string;
+}
+
 export async function fetchSchema(): Promise<TableSchema[]> {
   console.log('Attempting to fetch schema...');
   const client = await pool.connect();
@@ -62,6 +79,8 @@ export async function fetchSchema(): Promise<TableSchema[]> {
         isNullable: col.is_nullable === 'YES',
         nullable: col.is_nullable === 'YES',
         defaultValue: col.column_default,
+        isPrimaryKey: row.primary_key?.includes(col.column_name) || false,
+        isForeignKey: false
       })),
       primaryKeys: row.primary_key?.filter(Boolean) || null,
       foreignKeys: [],
@@ -77,7 +96,7 @@ export async function getTableSchema(tableName: string): Promise<TableSchema[]> 
   const sanitizedTableName = sanitizeTableName(tableName);
   const client = await pool.connect();
   try {
-    const result = await client.query(
+    const result = await client.query<SchemaQueryResult>(
       `SELECT 
         c.table_name,
         c.column_name,
@@ -86,7 +105,8 @@ export async function getTableSchema(tableName: string): Promise<TableSchema[]> 
         c.column_default,
         tc.constraint_type,
         kcu.referenced_table_name,
-        kcu.referenced_column_name
+        kcu.referenced_column_name,
+        current_setting('app.current_connection_id') as connection_id
       FROM information_schema.columns c
       LEFT JOIN information_schema.key_column_usage kcu
         ON c.table_name = kcu.table_name
@@ -106,6 +126,8 @@ export async function getTableSchema(tableName: string): Promise<TableSchema[]> 
       isNullable: row.is_nullable === 'YES',
       nullable: row.is_nullable === 'YES',
       defaultValue: row.column_default,
+      isPrimaryKey: row.constraint_type === 'PRIMARY KEY',
+      isForeignKey: row.constraint_type === 'FOREIGN KEY'
     }));
 
     const primaryKeys = result.rows
@@ -116,11 +138,11 @@ export async function getTableSchema(tableName: string): Promise<TableSchema[]> 
       .filter((row) => row.constraint_type === 'FOREIGN KEY')
       .map((row) => ({
         columnName: row.column_name,
-        referencedTable: row.referenced_table_name,
-        referencedColumn: row.referenced_column_name,
+        referencedTable: row.referenced_table_name || '',
+        referencedColumn: row.referenced_column_name || '',
       }));
 
-    const stats = await client.query(
+    const stats = await client.query<StatsQueryResult>(
       `SELECT 
         pg_total_relation_size($1) as total_bytes,
         (SELECT reltuples::bigint FROM pg_class WHERE relname = $1) as row_count
@@ -131,7 +153,7 @@ export async function getTableSchema(tableName: string): Promise<TableSchema[]> 
     return [{
       tableName: sanitizedTableName,
       name: sanitizedTableName,
-      connectionId: client.id,
+      connectionId: result.rows[0].connection_id,
       columns,
       primaryKeys,
       foreignKeys,
@@ -177,15 +199,27 @@ export async function executeQuery(sql: string): Promise<QueryResult> {
     const result = await client.query(sql);
     const endTime = Date.now();
 
-    return {
+    const queryResult: QueryResult = {
       columns: result.fields.map((field) => ({
         name: field.name,
         dataTypeId: field.dataTypeID,
       })),
+      fields: result.fields.map((field) => ({
+        name: field.name,
+        type: String(field.dataTypeID),
+        dataType: String(field.dataTypeID)
+      })),
+      metrics: {
+        executionTimeMs: endTime - startTime,
+        bytesProcessed: 0,
+        rowsAffected: result.rows.length
+      },
       rows: result.rows,
       rowCount: result.rowCount || 0,
       executionTime: endTime - startTime,
     };
+
+    return queryResult;
   } finally {
     client.release();
   }
