@@ -93,9 +93,6 @@ importers:
       '@redis/client':
         specifier: ^1.6.0
         version: 1.6.0
-      '@remix-run/css-bundle':
-        specifier: ^2.15.2
-        version: 2.15.2
       '@remix-run/node':
         specifier: ^2.15.2
         version: 2.15.2(typescript@5.7.2)
@@ -2049,10 +2046,6 @@ packages:
     resolution: {integrity: sha512-c1Q99M5ljsIuc4YdaCwfUEXsofakb9c8+Zse2qxTadu8TalLXuAESzLvFAvNVbkmSlvlzIQOLpBCmWI9wTOt+g==}
     peerDependencies:
       '@redis/client': ^1.0.0
-
-  '@remix-run/css-bundle@2.15.2':
-    resolution: {integrity: sha512-/GX8qPfUa9lZI0rx270/JH8oq4X3KFy7FlYV5dSB9pJjc5uR0BVkfb5htpS/U55o7d0qVwa28Wa9y5Z8D01CEQ==}
-    engines: {node: '>=18.0.0'}
 
   '@remix-run/dev@2.15.2':
     resolution: {integrity: sha512-o8lix8t4GBhtXjo/G1IzwtHVW5GRMs7amtFtBHiR1bhSyK7VyX5qGtTDmJyny5QDv83pxaLOCiE0dUng2BCoyQ==}
@@ -8203,8 +8196,6 @@ snapshots:
   '@redis/time-series@1.1.0(@redis/client@1.6.0)':
     dependencies:
       '@redis/client': 1.6.0
-
-  '@remix-run/css-bundle@2.15.2': {}
 
   '@remix-run/dev@2.15.2(@remix-run/react@2.15.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.7.2))(@remix-run/serve@2.15.2(typescript@5.7.2))(@types/node@22.10.5)(typescript@5.7.2)(vite@6.0.7(@types/node@22.10.5)(jiti@1.21.7)(yaml@2.7.0))':
     dependencies:
