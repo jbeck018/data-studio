@@ -7,6 +7,7 @@ import * as queries from "./queries";
 import * as audit from "./audit";
 import * as organization from "./organizations";
 import * as user from "./users";
+import * as permissions from "./permissions";
 
 // Re-export specific types to avoid ambiguity
 
@@ -19,6 +20,8 @@ export * from "./audit";
 export * from "./organizations";
 
 export * from "./users";
+
+export * from "./permissions";
 
 // Database connection types
 export const DATABASE_TYPES = [
@@ -46,10 +49,11 @@ const pool = new Pool({
 // Create database instance
 export const db = drizzle(pool, {
   schema: {
-    ...connections,
-    ...queries,
     ...audit,
+    ...connections,
     ...organization,
+    ...permissions,
+    ...queries,
     ...user,
   },
 });
@@ -62,10 +66,12 @@ export const {
   databaseConnections,
   queryHistory,
   auditLog,
+  connectionPermissions,
 } = {
   ...connections,
   ...queries,
   ...audit,
   ...organization,
   ...user,
+  ...permissions,
 };

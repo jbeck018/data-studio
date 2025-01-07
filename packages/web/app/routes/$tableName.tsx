@@ -1,7 +1,6 @@
-import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import { type LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData, useSearchParams } from "@remix-run/react";
 import { TabView } from "../components/TabView";
-import { DataView } from "../components/DataView";
 import { EmptyState } from "../components/EmptyState";
 import { RowDetailsSidebar } from "../components/RowDetailsSidebar";
 import { useCallback, useState } from "react";
@@ -38,11 +37,11 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     throw new Error(`Table ${tableName} not found`);
   }
 
-  return json({ 
+  return { 
     tableName, 
     data,
     columns: tableSchema.columns
-  });
+  };
 }
 
 export default function TablePage() {

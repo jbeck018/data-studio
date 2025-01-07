@@ -1,6 +1,5 @@
-import { json, redirect } from '@remix-run/node';
+import { redirect } from '@remix-run/node';
 import { getSession, setActiveConnection } from '../lib/auth/session.server';
-import { connectionManager } from '../lib/db/connection-manager.server';
 import type { ActionFunctionArgs } from '@remix-run/node';
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -9,7 +8,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const connectionId = formData.get('connectionId');
 
   if (!connectionId || typeof connectionId !== 'string') {
-    return json({ error: 'Connection ID is required' }, { status: 400 });
+    return { error: 'Connection ID is required', status: 400 };
   }
 
   const organizationId = session.get('organizationId');
@@ -22,6 +21,6 @@ export async function action({ request }: ActionFunctionArgs) {
     return redirect('/query');
   } catch (error) {
     console.error('Error setting active connection:', error);
-    return json({ error: 'Failed to set active connection' }, { status: 500 });
+    return { error: 'Failed to set active connection', status: 500 };
   }
 }

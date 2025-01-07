@@ -1,4 +1,4 @@
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { Outlet } from "@remix-run/react";
 import { getUser } from "../lib/auth/session.server";
 import type { LoaderFunctionArgs } from "@remix-run/node";
@@ -12,7 +12,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     return redirect("/");
   }
 
-  return json({});
+  return {};
 }
 
 export default function PublicRoot() {

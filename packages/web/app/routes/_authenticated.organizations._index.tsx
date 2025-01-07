@@ -1,4 +1,4 @@
-import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import { type LoaderFunctionArgs } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import { requireUser } from "../lib/auth/session.server";
 import { getUserOrganizations } from "../lib/organizations/organizations.server";
@@ -6,7 +6,7 @@ import { getUserOrganizations } from "../lib/organizations/organizations.server"
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const organizations = await getUserOrganizations(user.id);
-  return json({ organizations });
+  return { organizations };
 }
 
 export default function OrganizationsPage() {

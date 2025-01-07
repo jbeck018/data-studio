@@ -1,4 +1,4 @@
-import { json, type ActionFunctionArgs } from '@remix-run/node';
+import { type ActionFunctionArgs } from '@remix-run/node';
 import { z } from 'zod';
 import { db } from '../lib/db/db.server';
 import { ConnectionConfig, databaseConnections, NewDatabaseConnection, organizationMemberships } from '../lib/db/schema';
@@ -72,12 +72,13 @@ export async function action({ request }: ActionFunctionArgs) {
           // Close the temporary test connection
           await manager.closeConnection('temp-test');
   
-          return json({ success: true, message: "Connection successful" });
+          return { success: true, message: "Connection successful" };
         } catch (error) {
           console.error("Connection test error:", error);
-          return json({ 
-            error: error instanceof Error ? error.message : "Failed to test connection" 
-          }, { status: 400 });
+          return { 
+            error: error instanceof Error ? error.message : "Failed to test connection",
+            status: 400
+          };
         }
       }
 
@@ -89,7 +90,7 @@ export async function action({ request }: ActionFunctionArgs) {
       });
 
       if (!orgMember) {
-        return json({ error: 'No organization found' }, { status: 404 });
+        return { error: 'No organization found', status: 404 };
       }
 
       const newConnection: NewDatabaseConnection = {
@@ -113,12 +114,13 @@ export async function action({ request }: ActionFunctionArgs) {
         await db.delete(databaseConnections)
           .where(eq(databaseConnections.id, connection.id));
         
-        return json({ 
-          error: error instanceof Error ? error.message : "Connection test failed" 
-        }, { status: 400 });
+        return { 
+          error: error instanceof Error ? error.message : "Connection test failed",
+          status: 400
+        };
       }
 
-      return json(connection);
+      return connection;
     }
 
     case 'PUT': {
@@ -153,7 +155,7 @@ export async function action({ request }: ActionFunctionArgs) {
       });
 
       if (!connection) {
-        return json({ error: 'Connection not found' }, { status: 404 });
+        return { error: 'Connection not found', status: 404 };
       }
 
       // Update the connection
@@ -168,7 +170,7 @@ export async function action({ request }: ActionFunctionArgs) {
         .where(eq(databaseConnections.id, id))
         .returning();
 
-      return json(updated);
+      return updated;
     }
 
     case 'DELETE': {
@@ -190,7 +192,7 @@ export async function action({ request }: ActionFunctionArgs) {
       });
 
       if (!connection) {
-        return json({ error: 'Connection not found' }, { status: 404 });
+        return { error: 'Connection not found', status: 404 };
       }
 
       // Close the connection if it's active
@@ -201,10 +203,10 @@ export async function action({ request }: ActionFunctionArgs) {
       await db.delete(databaseConnections)
         .where(eq(databaseConnections.id, id));
 
-      return json({ success: true });
+      return { success: true };
     }
 
     default:
-      return json({ error: 'Method not allowed' }, { status: 405 });
+      return { error: 'Method not allowed', status: 405 };
   }
 }

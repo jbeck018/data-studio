@@ -1,4 +1,3 @@
-import { json } from '@remix-run/node';
 import type { LoaderFunctionArgs } from '@remix-run/node';
 import { db } from '../lib/db/db.server';
 import { databaseConnections } from '../lib/db/schema';
@@ -25,10 +24,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
     orderBy: (connections, { desc }) => [desc(connections.updatedAt)],
   });
 
-  return json({
+  return {
     connections,
     activeConnection,
-  });
+  };
 }
 
 export type ConnectionState = Awaited<ReturnType<typeof loader>>;

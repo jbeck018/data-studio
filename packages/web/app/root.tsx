@@ -1,26 +1,17 @@
 import {
   Links,
-  LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
   useLoaderData,
 } from "@remix-run/react";
-import { json, LoaderFunction } from "@remix-run/node";
+import { LoaderFunction } from "@remix-run/node";
 import styles from "./tailwind.css";
 import { ThemeProvider } from "./utils/theme";
 import Layout from "./components/Layout";
 import { loader as connectionLoader } from "./routes/connections.state";
 import { DatabaseConnection } from "./lib/db/schema";
-
-interface LoaderData {
-  ENV: {
-    NODE_ENV: string;
-  };
-  connections: DatabaseConnection[];
-  activeConnection: DatabaseConnection | null | undefined;
-}
 
 export const links: any = () => [
   { rel: "stylesheet", href: styles },
@@ -29,16 +20,15 @@ export const links: any = () => [
 
 export const loader: LoaderFunction = async ({ request }) => {
   const connectionState = await connectionLoader({ request, params: {}, context: {} });
-  const data = await connectionState.json();
-  const { connections, activeConnection } = data;
+  const { connections, activeConnection } = connectionState;
 
-  return json<LoaderData>({
+  return {
     ENV: {
       NODE_ENV: process.env.NODE_ENV,
     },
     connections,
     activeConnection,
-  });
+  };
 };
 
 export default function App() {
@@ -60,7 +50,6 @@ export default function App() {
         </ThemeProvider>
         <ScrollRestoration />
         <Scripts />
-        <LiveReload />
       </body>
     </html>
   );

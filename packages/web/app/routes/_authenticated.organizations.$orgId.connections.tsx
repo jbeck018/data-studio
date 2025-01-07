@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs, type LoaderFunctionArgs, json } from "@remix-run/node";
+import { type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
 import { eq } from "drizzle-orm";
 import { useState } from "react";
@@ -34,7 +34,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     where: eq(databaseConnections.organizationId, params.orgId || ''),
   });
 
-  return json({ connections, role });
+  return { connections, role };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -61,7 +61,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       });
 
       if (!result.success) {
-        return json({ errors: result.error.flatten() }, { status: 400 });
+        return { errors: result.error.flatten(), status: 400 };
       }
 
       const { name, ...config } = result.data;
@@ -70,7 +70,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       try {
         await testPostgresConnection(config);
       } catch (error) {
-        return json({ error: `Failed to connect: ${(error as Record<string, string>).message}` }, { status: 400 });
+        return { error: `Failed to connect: ${(error as Record<string, string>).message}`, status: 400 };
       }
 
       await db.insert(databaseConnections).values(config as unknown as NewDatabaseConnection);
@@ -81,7 +81,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     case "delete": {
       const connectionId = formData.get("connectionId");
       if (typeof connectionId !== "string") {
-        return json({ error: "Invalid connection ID" }, { status: 400 });
+        return { error: "Invalid connection ID", status: 400 };
       }
 
       // Close the connection if it's active
@@ -97,7 +97,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     case "test": {
       const connectionId = formData.get("connectionId");
       if (typeof connectionId !== "string") {
-        return json({ error: "Invalid connection ID" }, { status: 400 });
+        return { error: "Invalid connection ID", status: 400 };
       }
 
       try {
@@ -107,9 +107,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
         }
         const client = await pool.connect();
         await (client as any).release();
-        return json({ success: true });
+        return { success: true };
       } catch (error) {
-        return json({ error: (error as Record<string, string>).message }, { status: 400 });
+        return { error: (error as Record<string, string>).message, status: 400 };
       }
     }
 

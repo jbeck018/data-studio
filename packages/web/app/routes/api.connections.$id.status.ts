@@ -1,4 +1,3 @@
-import { json } from '@remix-run/node';
 import type { LoaderFunctionArgs } from '@remix-run/node';
 import { connectionManager } from '../lib/db/connection-manager.server';
 import { getConnection } from '../lib/connections/config.server';
@@ -27,14 +26,14 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     // Test if connection is alive
     const isAlive = await dbConnection.testConnection();
     
-    return json({
+    return {
       status: isAlive ? "connected" : "disconnected",
       error: null
-    });
+    };
   } catch (error) {
-    return json({
+    return {
       status: "error",
       error: error instanceof Error ? error.message : "Unknown error occurred"
-    });
+    };
   }
 }

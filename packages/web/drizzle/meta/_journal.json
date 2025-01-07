@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1732991409052,
-      "tag": "0000_useful_retro_girl",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1732991432390,
-      "tag": "0001_overjoyed_reaper",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1732991750084,
-      "tag": "0002_nebulous_runaways",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1733086668815,
-      "tag": "0003_early_nova",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1733087613315,
-      "tag": "0004_lively_wong",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1733098377608,
-      "tag": "0005_fearless_naoko",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1733100254917,
-      "tag": "0006_chunky_ser_duncan",
+      "when": 1736232979548,
+      "tag": "0000_tranquil_iron_fist",
       "breakpoints": true
     }
   ]

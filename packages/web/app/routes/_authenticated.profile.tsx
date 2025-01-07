@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs, type LoaderFunctionArgs, json } from "@remix-run/node";
+import { type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useLoaderData } from "@remix-run/react";
 import { z } from "zod";
 import { Button } from "../components/ui/button";
@@ -41,7 +41,7 @@ interface ActionData {
 export async function loader({ request }: LoaderFunctionArgs) {
   const userId = await requireUserId(request);
   const user = await getUserById(userId);
-  return json({ user });
+  return { user };
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -62,10 +62,7 @@ export async function action({ request }: ActionFunctionArgs) {
   });
 
   if (!result.success) {
-    return json<ActionData>(
-      { errors: result.error.flatten() },
-      { status: 400 }
-    );
+    return { errors: result.error.flatten(), status: 400 };
   }
 
   try {
@@ -75,18 +72,13 @@ export async function action({ request }: ActionFunctionArgs) {
       hashedPassword: result.data.newPassword,
     });
 
-    return json<ActionData>({ success: true });
+    return { success: true };
   } catch (error) {
     if (error instanceof Error) {
-      return json<ActionData>(
-        { errors: { formErrors: [error.message] } },
-        { status: 400 }
-      );
+      return { errors: { formErrors: [error.message] }, status: 400 };
     }
-    return json<ActionData>(
-      { errors: { formErrors: ["An unexpected error occurred"] } },
-      { status: 500 }
-    );
+
+    return { errors: { formErrors: ["An unexpected error occurred"] }, status: 500 };
   }
 }
 

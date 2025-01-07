@@ -1,11 +1,10 @@
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { Outlet, useLoaderData } from "@remix-run/react";
 import { getUser } from "../lib/auth/session.server";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { AuthenticatedLayout } from "../components/AuthenticatedLayout";
-import type { User } from "../lib/auth/types";
+import type { DatabaseConnection, User } from "../lib/auth/types";
 import { listConnections } from "../lib/connections/config.server";
-import type { DatabaseConnection } from "../lib/db/schema";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await getUser(request);
@@ -21,10 +20,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
   // Get connections for the current organization
   const connections = await listConnections(user.currentOrganization.id);
-  return json({ user, connections });
+  return { user, connections };
 }
 
+type LoaderData = {
+  user: User;
+  connections: DatabaseConnection[];
+};
+
 export default function AuthenticatedRoot() {
+  const { user, connections } = useLoaderData<LoaderData>();
   
   return (
     <AuthenticatedLayout />

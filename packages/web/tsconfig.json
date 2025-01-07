@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
+    "types": ["@remix-run/node", "vite/client"],
     "target": "ES2015",
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "lib": ["ES2015", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "strict": true,

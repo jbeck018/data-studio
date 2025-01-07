@@ -4,7 +4,7 @@ import { organizationMemberships } from './organizations';
 import { connectionPermissions } from './permissions';
 
 export const users = pgTable('users', {
-  id: text('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
   hashedPassword: text('hashed_password').notNull(),

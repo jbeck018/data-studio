@@ -1,4 +1,3 @@
-import { json } from '@remix-run/node';
 import type { ActionFunctionArgs } from '@remix-run/node';
 import { requireUser } from '../lib/auth/auth.server';
 import { connectionManager } from '../lib/db/connection-manager.server';
@@ -11,10 +10,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const connectionId = formData.get('connectionId') as string;
 
   if (!query || !connectionId) {
-    return json(
-      { message: 'Query and connectionId are required' },
-      { status: 400 }
-    );
+    return { message: 'Query and connectionId are required', status: 400 };
   }
 
   try {
@@ -52,7 +48,7 @@ export async function action({ request }: ActionFunctionArgs) {
       }
     );
 
-    return json(formattedResult);
+    return formattedResult;
   } catch (error) {
     await auditLogger.logQueryExecution(
       user.id,
@@ -64,9 +60,6 @@ export async function action({ request }: ActionFunctionArgs) {
       }
     );
 
-    return json(
-      { message: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return { message: error instanceof Error ? error.message : 'Unknown error', status: 500 }
   }
 }

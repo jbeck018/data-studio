@@ -1,4 +1,4 @@
-import { json, redirect } from "@remix-run/react";
+import { redirect } from "@remix-run/react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useParams } from "@remix-run/react";
 import { Button } from "../components/ui/button";
@@ -22,10 +22,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const role = formData.get('role') as Role;
 
   if (!email || !role) {
-    return json(
-      { errors: { formErrors: ['Email and role are required'] } },
-      { status: 400 }
-    );
+    return { errors: { formErrors: ['Email and role are required'] }, status: 400 };
   }
 
   try {
@@ -34,10 +31,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     });
 
     if (!user) {
-      return json(
-        { errors: { formErrors: ['User not found'] } },
-        { status: 404 }
-      );
+      return { errors: { formErrors: ['User not found'] }, status: 404 };
     }
 
     await db.insert(organizationMemberships).values({
@@ -49,25 +43,23 @@ export async function action({ request, params }: ActionFunctionArgs) {
     return redirect(`/organizations/${params.orgId}/members`);
   } catch (error) {
     if (error instanceof Error) {
-      return json(
-        {
-          errors: {
-            formErrors: [error.message],
-            fieldErrors: {},
-          },
+      return {
+        errors: {
+          formErrors: [error.message],
+          fieldErrors: {},
         },
-        { status: 400 }
-      );
+        status: 400
+      };
     }
-    return json(
-      {
+    return {
+      errors: {
         errors: {
           formErrors: ["An unexpected error occurred"],
           fieldErrors: {},
         },
       },
-      { status: 500 }
-    );
+      status: 500
+    };
   }
 }
 

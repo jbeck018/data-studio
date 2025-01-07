@@ -1,4 +1,4 @@
-import { json, redirect, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
+import { redirect, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
 import { useActionData, useFetcher, useFormAction } from "@remix-run/react";
 import { requireUser } from "../lib/auth/session.server";
 import { createOrganization } from "../lib/organizations/organizations.server";
@@ -40,7 +40,7 @@ export type ActionData = {
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await requireUser(request);
-  return json({});
+  return {};
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -53,7 +53,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
     const result = CreateOrganizationSchema.safeParse({ name, slug, description });
     if (!result.success) {
-      return json<ActionData>({ errors: result.error.flatten() }, { status: 400 });
+      return { errors: result.error.flatten(), status: 400 };
     }
 
     const organization = await createOrganization(
@@ -66,11 +66,10 @@ export async function action({ request }: ActionFunctionArgs) {
     return redirect(`/organizations/${organization.id}`);
   } catch (error) {
     console.error('Error creating organization:', error);
-    return json<ActionData>({
+    return {
       errors: {
         formErrors: ['Failed to create organization. Please try again.']
-      }
-    }, { status: 500 });
+      }, status: 500 };
   }
 }
 

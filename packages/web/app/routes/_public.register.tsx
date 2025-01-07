@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs, json, redirect } from "@remix-run/node";
+import { type ActionFunctionArgs, redirect } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 import { createUserSession, register } from "~/lib/auth";
 import { getUser } from "~/lib/auth/session.server";
@@ -18,7 +18,7 @@ export async function loader({ request }: ActionFunctionArgs) {
   if (user) {
     return redirect("/dashboard");
   }
-  return json({});
+  return {};
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -28,18 +28,18 @@ export async function action({ request }: ActionFunctionArgs) {
   const name = formData.get("name") as string;
 
   if (!email || !password || !name) {
-    return json<RegisterActionData>({
+    return {
       error: "All fields are required",
       fields: { email, password, name },
-    });
+    } as RegisterActionData;
   }
 
   const user = await register(email, password, name);
   if (!user) {
-    return json<RegisterActionData>({
+    return {
       error: "A user with this email already exists",
       fields: { email, password, name },
-    });
+    } as RegisterActionData;
   }
 
   return createUserSession(user.id, "/dashboard");

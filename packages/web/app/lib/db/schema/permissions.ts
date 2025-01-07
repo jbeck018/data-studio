@@ -11,10 +11,11 @@ import { databaseConnections } from "./connections";
 import { users } from "./users";
 import { SQLOperation } from '../permissions-manager.server';
 import { organizations } from "./organizations";
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 
 export const connectionPermissions = pgTable("connection_permissions", {
-	id: text("id").primaryKey(),
-	userId: text("user_id")
+	id: uuid("id").primaryKey().defaultRandom(),
+	userId: uuid("user_id")
 		.notNull()
 		.references(() => users.id),
 	connectionId: uuid("connection_id")
@@ -77,3 +78,6 @@ export type Permission = {
 	canConnect: boolean;
 	queryRestrictions?: QueryRestriction;
 };
+
+export const insertConnectionPermissionSchema = createInsertSchema(connectionPermissions);
+export const selectConnectionPermissionSchema = createSelectSchema(connectionPermissions);

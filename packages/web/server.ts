@@ -1,11 +1,9 @@
 import type { RequestHandler } from "@remix-run/express";
 import { createRequestHandler } from "@remix-run/express";
-import { broadcastDevReady, installGlobals } from "@remix-run/node";
+import { broadcastDevReady } from "@remix-run/node";
 import express from "express";
 import { Server } from "http";
 import type { ViteDevServer } from "vite";
-
-installGlobals();
 
 async function startServer(): Promise<void> {
   try {

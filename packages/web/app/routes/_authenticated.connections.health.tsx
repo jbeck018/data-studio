@@ -1,5 +1,4 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
-import { json } from '@remix-run/node';
 import { useLoaderData, useSubmit } from '@remix-run/react';
 import { db } from '../lib/db/db.server';
 import { requireUser } from '../lib/auth/session.server';
@@ -80,7 +79,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     userConnections.map(conn => getConnectionHealth(conn.id))
   );
 
-  return json({ connections: healthData.filter((conn): conn is ConnectionHealth => conn !== null) });
+  return { connections: healthData.filter((conn): conn is ConnectionHealth => conn !== null) };
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -94,7 +93,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const connectionId = formData.get('connectionId');
 
   if (!connectionId || typeof connectionId !== 'string') {
-    return json({ error: 'Connection ID is required' }, { status: 400 });
+    return { error: 'Connection ID is required', status: 400 };
   }
 
   // Verify user has permission to manage this connection
@@ -106,15 +105,15 @@ export async function action({ request }: ActionFunctionArgs) {
   });
 
   if (!connection) {
-    return json({ error: 'Connection not found' }, { status: 404 });
+    return { error: 'Connection not found', status: 404 };
   }
 
   if (action === 'reset') {
     await connectionManager.resetConnection(connectionId);
-    return json({ success: true });
+    return { success: true };
   }
 
-  return json({ error: 'Invalid action' }, { status: 400 });
+  return { error: 'Invalid action', status: 400 };
 }
 
 export default function ConnectionHealthPage() {

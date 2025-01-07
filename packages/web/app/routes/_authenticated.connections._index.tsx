@@ -1,4 +1,4 @@
-import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import { type LoaderFunctionArgs } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import { requireUser } from "../lib/auth/session.server";
 import { listConnections } from "../lib/connections/config.server";
@@ -15,7 +15,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     ...conn,
     status: 'connected' as const // TODO: Implement actual connection status check
   }));
-  return json({ connections: connectionsWithStatus });
+  return { connections: connectionsWithStatus };
 }
 
 export default function ConnectionsIndexPage() {

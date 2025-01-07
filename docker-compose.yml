@@ -12,11 +12,6 @@ services:
       - "5555:5432"
     volumes:
       - system-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   # Test database with sample data
   test-db:
@@ -30,11 +25,6 @@ services:
     volumes:
       - test-db-data:/var/lib/postgresql/data
       - ./packages/server/test/fixtures:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
 volumes:
   system-db-data:

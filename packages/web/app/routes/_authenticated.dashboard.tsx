@@ -1,9 +1,8 @@
-import { json } from "@remix-run/node";
 import { Link } from "@remix-run/react";
 import type { LoaderFunctionArgs } from "@remix-run/node";
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  return json({});
+  return {};
 }
 
 export default function Index() {

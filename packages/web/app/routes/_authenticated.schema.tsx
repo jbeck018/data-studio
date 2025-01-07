@@ -1,4 +1,3 @@
-import { json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { fetchDatabaseSchema } from '../utils/database.server';
 import { SchemaVisualization } from '../components/SchemaVisualization';
@@ -10,10 +9,10 @@ export async function loader({ request }: { request: Request }) {
     const connectionId = 'your-connection-id'; // You'll need to get this from your auth context
     const organizationId = 'your-org-id'; // You'll need to get this from your auth context
     const schema = await fetchDatabaseSchema(connectionId, organizationId);
-    return json({ schema });
+    return { schema };
   } catch (error) {
     console.error('Failed to fetch schema:', error);
-    return json({ error: 'Failed to fetch database schema' }, { status: 500 });
+    return { error: 'Failed to fetch database schema', status: 500 };
   }
 }
 

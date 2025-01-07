@@ -1,5 +1,4 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
-import { json } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { db } from '../lib/db/db.server';
 import { requireUser } from '../lib/auth/auth.server';
@@ -53,7 +52,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     where: eq(connectionPermissions.connectionId, connectionId),
   });
 
-  return json({
+  return {
     connection,
     users: orgUsers,
     permissions: permissions.map(p => ({
@@ -62,7 +61,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       canConnect: p.canConnect,
       queryRestrictions: p.queryRestrictions as QueryRestrictions | undefined
     })),
-  });
+  };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -102,7 +101,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     }
   );
 
-  return json({ success: true });
+  return { success: true };
 }
 
 export default function ConnectionPermissionsPage() {

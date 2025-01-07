@@ -1,4 +1,4 @@
-import { json, redirect, type ActionFunctionArgs } from "@remix-run/node";
+import { redirect, type ActionFunctionArgs } from "@remix-run/node";
 import { Form, useActionData, useNavigation } from "@remix-run/react";
 import { requireUser } from "../lib/auth/session.server";
 import { ConnectionInput, ConnectionSchema, createConnection, testConnection } from "../lib/connections/config.server";
@@ -47,7 +47,7 @@ export async function action({ request }: ActionFunctionArgs) {
   // Ensure user is authenticated
   const user = await requireUser(request);
   if (!user) {
-    return json({ error: "Unauthorized" }, { status: 401 });
+    return { error: "Unauthorized", status: 401 };
   }
 
   try {
@@ -87,10 +87,11 @@ export async function action({ request }: ActionFunctionArgs) {
     const isValid = await testConnection(connectionConfig as unknown as ConnectionInput);
 
     if (!isValid) {
-      return json({ 
+      return { 
         error: "Invalid connection details", 
-        details: ["Could not connect to database"] 
-      }, { status: 400 });
+        details: ["Could not connect to database"],
+        status: 400
+      };
     }
 
     // Insert the connection into the database
@@ -102,15 +103,17 @@ export async function action({ request }: ActionFunctionArgs) {
 
     // Handle different types of errors
     if (error instanceof z.ZodError) {
-      return json({ 
+      return { 
         error: "Invalid connection details", 
-        details: error.errors 
-      }, { status: 400 });
+        details: error.errors,
+        status: 400
+      };
     }
 
-    return json({ 
-      error: error instanceof Error ? error.message : "Failed to create connection" 
-    }, { status: 500 });
+    return { 
+      error: error instanceof Error ? error.message : "Failed to create connection",
+      status: 500
+    };
   }
 }
 

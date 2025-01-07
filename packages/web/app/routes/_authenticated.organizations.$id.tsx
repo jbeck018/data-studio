@@ -1,4 +1,4 @@
-import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import { type LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { requireUser } from "../lib/auth/session.server";
 import { getOrganization } from "../lib/organizations/organizations.server";
@@ -21,7 +21,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     throw new Response("Organization not found", { status: 404 });
   }
 
-  return json({ organization });
+  return { organization };
 }
 
 export default function OrganizationPage() {

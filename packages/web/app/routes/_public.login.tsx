@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs, json } from "@remix-run/node";
+import { type ActionFunctionArgs } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 import { createUserSession, login } from "~/lib/auth";
 import { getUser } from "~/lib/auth/session.server";
@@ -15,9 +15,9 @@ interface LoginActionData {
 export async function loader({ request }: ActionFunctionArgs) {
   const user = await getUser(request);
   if (user) {
-    return json({ user });
+    return { user };
   }
-  return json({ user: null });
+  return { user: null };
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -27,18 +27,18 @@ export async function action({ request }: ActionFunctionArgs) {
   const redirectTo = formData.get("redirectTo") as string || "/dashboard";
 
   if (!email || !password) {
-    return json<LoginActionData>({
+    return {
       error: "Email and password are required",
       fields: { email, password },
-    });
+    } as LoginActionData;
   }
 
   const user = await login(email, password);
   if (!user) {
-    return json<LoginActionData>({
+    return {
       error: "Invalid email or password",
       fields: { email, password },
-    });
+    } as LoginActionData;
   }
 
   return createUserSession(user.id, redirectTo);
