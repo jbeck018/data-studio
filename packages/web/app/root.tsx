@@ -1,10 +1,9 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "react-router";
-import { LoaderFunction } from "react-router";
-import styles from "./tailwind.css";
+import type { LoaderFunction } from "react-router";
+import styles from "./tailwind.css?url";
 import { ThemeProvider } from "./utils/theme";
 import Layout from "./components/Layout";
 import { loader as connectionLoader } from "./routes/connections.state";
-import { DatabaseConnection } from "./lib/db/schema";
 
 export const links: any = () => [
   { rel: "stylesheet", href: styles },

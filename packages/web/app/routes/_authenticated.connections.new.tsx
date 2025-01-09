@@ -1,7 +1,8 @@
 import { redirect, type ActionFunctionArgs } from "react-router";
 import { Form, useActionData, useNavigation } from "react-router";
 import { requireUser } from "../lib/auth/session.server";
-import { ConnectionInput, ConnectionSchema, createConnection, testConnection } from "../lib/connections/config.server";
+import { createConnection, testConnection } from "../lib/connections/config.server";
+import { ConnectionSchema, type ConnectionInput } from "../lib/connections/types";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,7 +25,6 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Checkbox } from "../components/ui/checkbox";
-import { create } from "lodash-es";
 
 type FormSchema = z.infer<typeof ConnectionSchema>;
 
@@ -240,7 +240,7 @@ export default function NewConnectionPage() {
                                   // Convert empty string to undefined and string to number
                                   onChange={(e) => {
                                     const value = e.target.value;
-                                    field.onChange(value === '' ? undefined : parseInt(value, 10));
+                                    field.onChange(value === '' ? undefined : Number.parseInt(value, 10));
                                   }}
                                   // Convert undefined to empty string for controlled input
                                   value={field.value?.toString() ?? ''}

@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import pg from "pg";
 
 // Import all schemas
 import * as connections from "./connections";
@@ -37,7 +37,7 @@ export const DATABASE_TYPES = [
 export type DatabaseType = typeof DATABASE_TYPES[number];
 
 // Create database pool
-const pool = new Pool({
+const pool = new pg.Pool({
   host: process.env.SYSTEM_DB_HOST,
   port: Number(process.env.SYSTEM_DB_PORT),
   user: process.env.SYSTEM_DB_USER,

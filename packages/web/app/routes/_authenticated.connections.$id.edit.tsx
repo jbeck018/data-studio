@@ -3,13 +3,13 @@ import { Form, useActionData, useLoaderData, useNavigation } from "react-router"
 import { Button } from "../components/ui/button";
 import { requireUser } from "../lib/auth/session.server";
 import { 
-  ConnectionSchema, 
   getConnection, 
   deleteConnection,
   testConnection, 
   updateConnection 
 } from "../lib/connections/config.server";
-import { DatabaseConnection, DATABASE_TYPES } from "~/lib/db/schema";
+import { type DatabaseConnection, DATABASE_TYPES } from "~/lib/db/schema";
+import { ConnectionSchema } from "~/lib/connections/types";
 
 interface ActionData {
   errors?: {

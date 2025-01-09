@@ -1,4 +1,4 @@
-import { createServer } from 'http';
+import { createServer } from 'node:http';
 import express from 'express';
 import { createRequestHandler } from '@react-router/express';
 import { webSocketManager } from './services/websocket.server';

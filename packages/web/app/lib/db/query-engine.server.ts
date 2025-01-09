@@ -1,5 +1,5 @@
 import pg from 'pg';
-import type { Parser } from 'node-sql-parser';
+import parser from 'node-sql-parser';
 import type { QueryResult, QueryMetrics, QueryField, DatabaseValue } from '../../types';
 import { sanitizeQuery } from '~/utils/sql-sanitizer.server';
 import { DatabaseConnection } from './schema';
@@ -21,7 +21,7 @@ export class QueryEngine {
   private static instance: QueryEngine;
   private pool: pg.Pool | null = null;
   private client: pg.PoolClient | null = null;
-  private parser: Parser;
+  private parser: parser.Parser;
 
   private constructor() {
     const { Parser } = require('node-sql-parser');

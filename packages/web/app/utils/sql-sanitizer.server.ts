@@ -1,6 +1,6 @@
 import { format } from "sql-formatter";
 import { QueryError, QueryErrorCode } from '~/types/query';
-import { Parser } from 'node-sql-parser';
+import nodeParser from 'node-sql-parser';
 
 const VALID_IDENTIFIER_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const RESERVED_WORDS = new Set([
@@ -202,7 +202,7 @@ export async function sanitizeQuery(sql: string): Promise<string> {
     throw new QueryError(QueryErrorCode.VALIDATION_ERROR, 'SQL query cannot be empty');
   }
 
-  const parser = new Parser();
+  const parser = new nodeParser.Parser();
   let ast;
 
   try {
@@ -235,7 +235,7 @@ export async function sanitizeQuery(sql: string): Promise<string> {
  * Validates identifiers in a SQL query.
  */
 export function validateIdentifiers(sql: string): void {
-  const parser = new Parser();
+  const parser = new nodeParser.Parser();
   let ast;
 
   try {

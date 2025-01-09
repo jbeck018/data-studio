@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import pg from "pg";
 import { db } from "../db/db.server";
 import { databaseConnections } from "../db/schema";
 import { eq } from "drizzle-orm";
@@ -14,9 +14,9 @@ interface PoolConfig {
 }
 
 export class ConnectionPool {
-  private pools: Map<string, Pool> = new Map();
+  private pools: Map<string, pg.Pool> = new Map();
 
-  async getPool(connection: DatabaseConnection): Promise<Pool> {
+  async getPool(connection: DatabaseConnection): Promise<pg.Pool> {
     if (this.pools.has(connection.id)) {
       return this.pools.get(connection.id)!;
     }
@@ -27,14 +27,14 @@ export class ConnectionPool {
 
     const config: PoolConfig = {
       host: connection.host || '',
-      port: connection.port ? parseInt(connection.port) : 5432,
+      port: connection.port ? Number.parseInt(connection.port) : 5432,
       database: connection.database || '',
       user: connection.username || '',
       password: connection.password || '',
       ssl: connection.ssl || false,
     };
 
-    const pool = new Pool(config);
+    const pool = new pg.Pool(config);
 
     // Test the connection
     try {
