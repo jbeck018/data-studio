@@ -11,6 +11,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
     return redirect("/dashboard");
   }
 
+  console.log('Root route - User is not authenticated');
+
   // Otherwise, redirect to login with the current URL as the redirect target
   const url = new URL(request.url);
   return redirect(`/login?redirectTo=${encodeURIComponent(url.pathname)}`);

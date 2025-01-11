@@ -1,8 +1,9 @@
 import type { RequestHandler } from "@react-router/express";
 import { createRequestHandler } from "@react-router/express";
 import express from "express";
-import { Server } from "http";
+import { createServer } from 'node:http';
 import type { ViteDevServer } from "vite";
+import { webSocketManager } from './app/services/websocket.server';
 
 async function startServer(): Promise<void> {
   try {
@@ -16,7 +17,6 @@ async function startServer(): Promise<void> {
     }
 
     const app = express();
-    const httpServer = new Server(app);
 
     // Handle Remix requests
     if (viteDevServer) {
@@ -29,16 +29,22 @@ async function startServer(): Promise<void> {
 
     const build = viteDevServer
       ? async () => {
-          const build = await viteDevServer!.ssrLoadModule("virtual:react-router/server-build");
+          const build = await viteDevServer.ssrLoadModule("virtual:react-router/server-build");
           return build;
         }
       : async () => {
-          const build = await import("./build/index.js");
+          const build = await import("./build/server/index.js");
           return build;
         };
 
+    // Create HTTP server
+    const httpServer = createServer(app);
+
+    // Initialize WebSocket server
+    const wsServer = webSocketManager;
+
     const handler: RequestHandler = createRequestHandler({
-      build: build as any,
+      build: await build(),
       mode: process.env.NODE_ENV,
     });
 
