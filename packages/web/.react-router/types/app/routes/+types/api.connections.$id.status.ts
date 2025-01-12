@@ -1,5 +1,5 @@
 // React Router generated types for route:
-// routes/api.connections.$id.status.ts
+// routes/api.connections.$id.status.tsx
 
 import type * as T from "react-router/route-module"
 
@@ -11,7 +11,7 @@ type Module = typeof import("../api.connections.$id.status.js")
 export type Info = {
   parents: [Parent0, Parent1],
   id: "routes/api.connections.$id.status"
-  file: "routes/api.connections.$id.status.ts"
+  file: "routes/api.connections.$id.status.tsx"
   path: ":id/status"
   params: {"id": string} & { [key: string]: string | undefined }
   module: Module

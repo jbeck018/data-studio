@@ -228,9 +228,6 @@ importers:
       tailwind-merge:
         specifier: ^2.6.0
         version: 2.6.0
-      tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.17
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.17)
@@ -352,12 +349,18 @@ importers:
       path-browserify:
         specifier: ^1.0.1
         version: 1.0.1
+      postcss:
+        specifier: ^8.4.49
+        version: 8.4.49
       postgres:
         specifier: ^3.4.5
         version: 3.4.5
       stream-browserify:
         specifier: ^3.0.0
         version: 3.0.0
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.17
       typescript:
         specifier: ^5.7.2
         version: 5.7.2

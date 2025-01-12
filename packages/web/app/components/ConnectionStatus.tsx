@@ -40,7 +40,7 @@ export function ConnectionStatus({ connection }: ConnectionStatusProps) {
       mounted = false;
       clearInterval(interval);
     };
-  }, [connection.id, isChecking]);
+  }, [connection?.id, isChecking]);
 
   const statusColors = {
     connected: 'bg-green-100 text-green-800',

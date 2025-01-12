@@ -1,8 +1,5 @@
-/** @type {import('tailwindcss').Config} */
-import type { Config } from 'tailwindcss'
-
 export default {
-  content: ['./app/**/*.{js,jsx,ts,tsx}'],
+  content: ['./app/**/*.{js,jsx,ts,tsx}', "./index.html"],
   darkMode: ['class', 'class'],
   theme: {
   	extend: {
@@ -72,4 +69,4 @@ export default {
   	}
   },
   plugins: [],
-} satisfies Config
+}

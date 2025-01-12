@@ -1,31 +1,14 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "react-router";
 import type { LoaderFunction } from "react-router";
-import styles from "./tailwind.css?url";
 import { ThemeProvider } from "./utils/theme";
-import Layout from "./components/Layout";
-import { loader as connectionLoader } from "./routes/connections.state";
+import styles from "./tailwind.css?url";
 
 export const links: any = () => [
   { rel: "stylesheet", href: styles },
   { rel: "icon", type: "image/svg+xml", href: "/assets/favicon.svg" },
 ];
 
-export const loader: LoaderFunction = async ({ request }) => {
-  const connectionState = await connectionLoader({ request, params: {}, context: {} });
-  const { connections, activeConnection } = connectionState;
-
-  return {
-    ENV: {
-      NODE_ENV: process.env.NODE_ENV,
-    },
-    connections,
-    activeConnection,
-  };
-};
-
 export default function App({ loaderData }: { loaderData: LoaderFunction }) {
-  const { connections, activeConnection } = useLoaderData();
-
   return (
     <html lang="en" className="h-full">
       <head>
@@ -36,9 +19,7 @@ export default function App({ loaderData }: { loaderData: LoaderFunction }) {
       </head>
       <body className="h-full">
         <ThemeProvider>
-          <Layout connections={connections} activeConnection={activeConnection}>
-            <Outlet />
-          </Layout>
+          <Outlet />
         </ThemeProvider>
         <ScrollRestoration />
         <Scripts />

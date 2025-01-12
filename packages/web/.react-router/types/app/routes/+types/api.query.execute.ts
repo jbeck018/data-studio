@@ -1,5 +1,5 @@
 // React Router generated types for route:
-// routes/api.query.execute.ts
+// routes/api.query.execute.tsx
 
 import type * as T from "react-router/route-module"
 
@@ -11,7 +11,7 @@ type Module = typeof import("../api.query.execute.js")
 export type Info = {
   parents: [Parent0, Parent1],
   id: "routes/api.query.execute"
-  file: "routes/api.query.execute.ts"
+  file: "routes/api.query.execute.tsx"
   path: "execute"
   params: {} & { [key: string]: string | undefined }
   module: Module

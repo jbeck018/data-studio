@@ -5,7 +5,7 @@
       "vite/client"
     ],
     "rootDirs": [".", "./.react-router/types"],
-    "target": "ES2015",
+    "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "lib": [
@@ -31,11 +31,10 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": [
-    "remix.env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".react-router/types/**/*"
-  ],
+, "tailwind.config.js"  ],
   "exclude": [
     "**/*.test.{ts,tsx}",
     "**/__tests__/**/*.{ts,tsx}",

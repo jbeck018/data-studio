@@ -1,19 +1,29 @@
-import { redirect } from "react-router";
+import { Outlet, useNavigate, useLocation, useLoaderData } from "react-router";
+import { useEffect } from "react";
 import type { LoaderFunctionArgs } from "react-router";
 import { getUser } from "../lib/auth/session.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await getUser(request);
   console.log('Root route - User:', user);
+  return { user };
+}
 
-  // If user is authenticated, redirect to the authenticated dashboard
-  if (user) {
-    return redirect("/dashboard");
-  }
+export default function Index() {
+  const { user } = useLoaderData<typeof loader>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isAuthPath = location.pathname === '/login' || location.pathname === '/register';
 
-  console.log('Root route - User is not authenticated');
+  useEffect(() => {
+    if (user && location.pathname.startsWith('/dashboard')) {
+      // If user is authenticated and not on dashboard, redirect to dashboard
+      navigate('/dashboard');
+    } else if (!user && !isAuthPath) {
+      // If user is not authenticated and not on login/register, redirect to login
+      navigate(`/login?redirectTo=${encodeURIComponent(location.pathname)}`);
+    }
+  }, [user, navigate, location.pathname, isAuthPath]);
 
-  // Otherwise, redirect to login with the current URL as the redirect target
-  const url = new URL(request.url);
-  return redirect(`/login?redirectTo=${encodeURIComponent(url.pathname)}`);
+  return <Outlet />;
 }

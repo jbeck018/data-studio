@@ -14,10 +14,7 @@ interface LoginActionData {
 
 export async function loader({ request }: ActionFunctionArgs) {
   const user = await getUser(request);
-  if (user) {
-    return { user };
-  }
-  return { user: null };
+  return { user };
 }
 
 export async function action({ request }: ActionFunctionArgs) {

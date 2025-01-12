@@ -4,7 +4,9 @@ import { getUser } from "../lib/auth/session.server";
 import type { LoaderFunctionArgs } from "react-router";
 import { AuthenticatedLayout } from "../components/AuthenticatedLayout";
 import type { DatabaseConnection, User } from "../lib/auth/types";
-import { listConnections } from "../lib/connections/config.server";
+// import { listConnections } from "../lib/connections/config.server";
+import { loader as connectionLoader } from "./connections.state";
+import Layout from "~/components/Layout";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await getUser(request);
@@ -19,19 +21,24 @@ export async function loader({ request }: LoaderFunctionArgs) {
     return redirect("/organizations/new");
   }
   // Get connections for the current organization
-  const connections = await listConnections(user.currentOrganization.id);
-  return { user, connections };
+  // const connections = await listConnections(user.currentOrganization.id);
+  const connectionState = await connectionLoader({ request, params: {}, context: {} });
+  const { connections, activeConnection } = connectionState;
+  return { user, connections, activeConnection };
 }
 
 type LoaderData = {
   user: User;
   connections: DatabaseConnection[];
+  activeConnection: DatabaseConnection | null;
 };
 
 export default function AuthenticatedRoot() {
-  const { user, connections } = useLoaderData<LoaderData>();
+  const { user, connections, activeConnection } = useLoaderData<LoaderData>();
   
   return (
-    <AuthenticatedLayout />
+    <Layout connections={connections as DatabaseConnection[]} activeConnection={activeConnection as DatabaseConnection | null}>
+      <Outlet />
+    </Layout>
   );
 }

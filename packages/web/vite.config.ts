@@ -23,22 +23,7 @@ export default defineConfig({
   optimizeDeps: {
     include: ['@xyflow/react', '@xyflow/system'],
   }
-  // resolve: {
-  //   alias: {
-  //     events: 'events',
-  //     crypto: 'crypto-browserify',
-  //     stream: 'stream-browserify',
-  //     buffer: 'buffer',
-  //     util: 'util',
-  //     path: 'path-browserify'
-  //   }
-  // },
-  // optimizeDeps: {
-  //   esbuildOptions: {
-  //     target: 'es2020'
-  //   },
-  //   include: ['buffer', 'events', 'stream-browserify', 'crypto-browserify', 'path-browserify', 'util']
-  // },
+
   // build: {
   //   target: 'es2020',
   //   rollupOptions: {

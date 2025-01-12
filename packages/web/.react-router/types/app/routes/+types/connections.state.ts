@@ -1,5 +1,5 @@
 // React Router generated types for route:
-// routes/connections.state.ts
+// routes/connections.state.tsx
 
 import type * as T from "react-router/route-module"
 
@@ -10,7 +10,7 @@ type Module = typeof import("../connections.state.js")
 export type Info = {
   parents: [Parent0],
   id: "routes/connections.state"
-  file: "routes/connections.state.ts"
+  file: "routes/connections.state.tsx"
   path: "connections/state"
   params: {} & { [key: string]: string | undefined }
   module: Module

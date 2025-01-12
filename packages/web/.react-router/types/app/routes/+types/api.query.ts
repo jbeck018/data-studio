@@ -1,5 +1,5 @@
 // React Router generated types for route:
-// routes/api.query.ts
+// routes/api.query.tsx
 
 import type * as T from "react-router/route-module"
 
@@ -10,7 +10,7 @@ type Module = typeof import("../api.query.js")
 export type Info = {
   parents: [Parent0],
   id: "routes/api.query"
-  file: "routes/api.query.ts"
+  file: "routes/api.query.tsx"
   path: "api/query"
   params: {} & { [key: string]: string | undefined }
   module: Module

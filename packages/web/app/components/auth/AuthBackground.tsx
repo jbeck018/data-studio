@@ -6,9 +6,11 @@ interface AuthBackgroundProps {
 
 export function AuthBackground({ children }: AuthBackgroundProps) {
   return (
-    <div className="min-h-screen">
-      <div className="relative">
-        {children}
+    <div className="flex h-screen bg-light-bg-secondary dark:bg-dark-bg-primary">
+      <div className="min-h-screen">
+        <div className="relative">
+          {children}
+        </div>
       </div>
     </div>
   );
