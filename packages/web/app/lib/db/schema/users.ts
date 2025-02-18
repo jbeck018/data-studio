@@ -1,7 +1,8 @@
 import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { organizationMemberships } from './organizations';
+import { Organization, organizationMemberships } from './organizations';
 import { connectionPermissions } from './permissions';
+import { DatabaseConnection } from './connections';
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -40,16 +41,7 @@ export type UserWithRelations = User & {
 };
 
 export type UserWithOrganization = UserWithRelations & {
-  organization: {
-    id: string;
-    name: string;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-  currentOrganization: {
-    id: string;
-    name: string;
-    createdAt: Date;
-    updatedAt: Date;
-  };
+  organization: Organization;
+  currentOrganization: Organization;
+  databaseConnections: DatabaseConnection[];
 };

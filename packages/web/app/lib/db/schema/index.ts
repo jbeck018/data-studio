@@ -61,12 +61,18 @@ export const db = drizzle(pool, {
 // Export schema objects
 export const {
   users,
+  usersRelations,
   organizations,
   organizationMemberships,
+  organizationMembershipsRelations,
   databaseConnections,
+  databaseConnectionsRelations,
   queryHistory,
+  queryHistoryRelations,
   auditLog,
+  auditLogRelations,
   connectionPermissions,
+  connectionPermissionsRelations,
 } = {
   ...connections,
   ...queries,

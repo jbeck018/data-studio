@@ -63,7 +63,7 @@ export function ConnectionHealthDashboard({ connections, onRefresh }: Connection
           </label>
           <Button
             onClick={onRefresh}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-current hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             Refresh
           </Button>
@@ -75,7 +75,7 @@ export function ConnectionHealthDashboard({ connections, onRefresh }: Connection
         {connections.map((conn) => (
           <div
             key={conn.connectionId}
-            className={`bg-white overflow-hidden shadow rounded-lg cursor-pointer transition-shadow hover:shadow-md ${
+            className={`bg-current overflow-hidden shadow rounded-lg cursor-pointer transition-shadow hover:shadow-md ${
               selectedConnection === conn.connectionId ? 'ring-2 ring-indigo-500' : ''
             }`}
             onClick={() => setSelectedConnection(conn.connectionId)}
@@ -124,7 +124,7 @@ export function ConnectionHealthDashboard({ connections, onRefresh }: Connection
 
       {/* Detailed View */}
       {selectedConnection && (
-        <div className="bg-white shadow rounded-lg">
+        <div className="bg-current shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             {connections
               .filter((conn) => conn.connectionId === selectedConnection)
@@ -141,7 +141,7 @@ export function ConnectionHealthDashboard({ connections, onRefresh }: Connection
                     </div>
                     <Button
                       onClick={() => handleResetConnection(conn.connectionId)}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-current hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
                       Reset Connection
                     </Button>

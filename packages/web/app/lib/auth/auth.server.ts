@@ -1,10 +1,9 @@
 import { db } from "~/lib/db/db.server";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import type { UserWithOrganization } from "~/lib/db/schema/types";
 import { createCookieSessionStorage, redirect } from "react-router";
 import { v4 as uuidv4 } from "uuid";
-import { organizationMemberships, organizations } from "../db/schema";
+import { organizationMemberships, organizations, UserWithOrganization } from "../db/schema";
 import { users } from "../db/schema";
 
 export async function createUser(email: string, password: string, name: string) {
@@ -61,6 +60,9 @@ export async function verifyLogin(email: string, password: string): Promise<User
   // Get the user's organization
   const org = await db.query.organizations.findFirst({
     where: eq(organizations.id, user.organizationId),
+    with: {
+      databaseConnections: true,
+    }
   });
 
   if (!org) return null;
@@ -69,6 +71,8 @@ export async function verifyLogin(email: string, password: string): Promise<User
     ...user,
     organization: org,
     currentOrganization: org,
+    connectionPermissions: user.connectionPermissions || [],
+    databaseConnections: org.databaseConnections || [],
   };
 }
 
@@ -85,6 +89,9 @@ export async function getUserById(id: string): Promise<UserWithOrganization | nu
 
   const org = await db.query.organizations.findFirst({
     where: eq(organizations.id, user.organizationId),
+    with: {
+      databaseConnections: true,
+    }
   });
 
   if (!org) return null;
@@ -93,6 +100,8 @@ export async function getUserById(id: string): Promise<UserWithOrganization | nu
     ...user,
     organization: org,
     currentOrganization: org,
+    connectionPermissions: user.connectionPermissions || [],
+    databaseConnections: org.databaseConnections || [],
   };
 }
 
@@ -109,6 +118,9 @@ export async function getUserByEmail(email: string): Promise<UserWithOrganizatio
 
   const org = await db.query.organizations.findFirst({
     where: eq(organizations.id, user.organizationId),
+    with: {
+      databaseConnections: true,
+    }
   });
 
   if (!org) return null;
@@ -117,6 +129,8 @@ export async function getUserByEmail(email: string): Promise<UserWithOrganizatio
     ...user,
     organization: org,
     currentOrganization: org,
+    connectionPermissions: user.connectionPermissions || [],
+    databaseConnections: org.databaseConnections || [],
   };
 }
 

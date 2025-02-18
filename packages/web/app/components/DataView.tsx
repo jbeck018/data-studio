@@ -56,7 +56,7 @@ export function DataView({ table, onRefresh }: DataViewProps) {
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-current divide-y divide-gray-200">
             {/* Add table rows here */}
           </tbody>
         </table>
@@ -91,7 +91,7 @@ function CreateRowModal({ columns, onClose, onSubmit }: CreateRowModalProps) {
     <Dialog open onOpenChange={() => onClose()}>
       <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center">
-        <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
+        <div className="bg-current rounded-lg p-6 max-w-2xl w-full">
           <h3 className="text-lg font-semibold mb-4">Create New Row</h3>
           <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
             <div className="space-y-4">

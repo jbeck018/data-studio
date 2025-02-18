@@ -16,7 +16,7 @@ export function DatabaseSelector({ connections, activeConnection }: DatabaseSele
   }
 
   return (
-    <Form method="post" action="/connections/change" className="flex items-center">
+    <Form method="post" className="flex items-center">
       <select
         name="connectionId"
         defaultValue={activeConnection?.id || ""}

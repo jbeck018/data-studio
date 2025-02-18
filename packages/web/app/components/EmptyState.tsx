@@ -1,45 +1,42 @@
-import { CircleStackIcon, FolderIcon, TableCellsIcon } from "@heroicons/react/24/outline";
-import { Button } from "./ui/button";
-
-type EmptyStateType = "table" | "query" | "database";
+import { Link } from "react-router";
+import { cn } from "../utils/cn";
 
 interface EmptyStateProps {
-  type: EmptyStateType;
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
-  message: string;
+  description: string;
   action?: {
     label: string;
-    onClick: () => void;
+    href: string;
   };
+  className?: string;
 }
 
-const icons = {
-  table: TableCellsIcon,
-  query: CircleStackIcon,
-  database: FolderIcon,
-};
-
-export function EmptyState({ type, title, message, action }: EmptyStateProps) {
-  const Icon = icons[type];
-
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+  className,
+}: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-      <div className="flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-light-bg-tertiary dark:bg-dark-bg-tertiary">
-        <Icon className="w-8 h-8 text-light-text-secondary dark:text-dark-text-secondary" />
+    <div className={cn("flex flex-col items-center justify-center h-full p-8 text-center", className)}>
+      <div className="flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-muted">
+        <Icon className="w-8 h-8 text-muted-foreground" />
       </div>
-      <h3 className="mb-2 text-lg font-medium text-light-text-primary dark:text-dark-text-primary">
+      <h3 className="mb-2 text-lg font-medium text-foreground">
         {title}
       </h3>
-      <p className="mb-6 text-sm text-light-text-secondary dark:text-dark-text-secondary max-w-sm">
-        {message}
+      <p className="mb-6 text-sm text-muted-foreground max-w-sm">
+        {description}
       </p>
       {action && (
-        <Button
-          onClick={action.onClick}
-          className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+        <Link
+          to={action.href}
+          className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
         >
           {action.label}
-        </Button>
+        </Link>
       )}
     </div>
   );

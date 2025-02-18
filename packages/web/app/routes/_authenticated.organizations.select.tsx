@@ -86,7 +86,7 @@ export default function SelectOrganization() {
               <input type="hidden" name="organizationId" value={org.id} />
               <Button
                 type="submit"
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-left hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
+                className="w-full rounded-lg border border-gray-300 bg-current px-4 py-3 text-left hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
               >
                 <div className="flex items-center justify-between">
                   <div>

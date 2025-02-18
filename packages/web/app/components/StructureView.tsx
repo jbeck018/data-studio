@@ -8,7 +8,7 @@ interface StructureViewProps {
 
 export function StructureView({ schema, onSave }: StructureViewProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+    <div className="bg-current dark:bg-gray-800 rounded-lg shadow">
       <div className="p-6">
         <TableStructure table={schema} onSave={onSave} />
       </div>

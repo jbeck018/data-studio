@@ -200,7 +200,7 @@ export function CreateConnectionDialog() {
           Add Connection
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] bg-light-bg-primary dark:bg-dark-bg-secondary">
+      <DialogContent className="sm:max-w-[425px] bg-light-bg-current dark:bg-dark-bg-secondary">
         <DialogHeader>
           <DialogTitle className="text-light-text-primary dark:text-dark-text-primary">
             Add New Database Connection
@@ -442,7 +442,7 @@ export function CreateOrgDialog() {
           Create Organization
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] bg-light-bg-primary dark:bg-dark-bg-secondary">
+      <DialogContent className="sm:max-w-[425px] bg-light-bg-current dark:bg-dark-bg-secondary">
         <DialogHeader>
           <DialogTitle className="text-light-text-primary dark:text-dark-text-primary">
             Create New Organization

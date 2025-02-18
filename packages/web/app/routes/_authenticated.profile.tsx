@@ -98,7 +98,7 @@ export default function ProfilePage() {
               </p>
             </div>
 
-            <Form method="post" className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-md px-4 py-6 sm:p-8 md:col-span-2">
+            <Form method="post" className="bg-current dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 rounded-md px-4 py-6 sm:p-8 md:col-span-2">
               <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
                 <div className="col-span-full">
                   <label htmlFor="name" className="block text-sm font-medium leading-6 text-gray-900 dark:text-white">

@@ -159,7 +159,7 @@ export function DataGrid({
               )}
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="bg-current dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {currentRows.map((row, rowIndex) => (
               <tr
                 key={rowIndex}
@@ -212,7 +212,7 @@ export function DataGrid({
           <select
             value={currentPageSize}
             onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-current dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           >
             {rowsPerPageOptions.map((option) => (
               <option key={option} value={option}>

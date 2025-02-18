@@ -2,11 +2,10 @@ import { redirect } from "react-router";
 import { Outlet, useLoaderData } from "react-router";
 import { getUser } from "../lib/auth/session.server";
 import type { LoaderFunctionArgs } from "react-router";
-import { AuthenticatedLayout } from "../components/AuthenticatedLayout";
 import type { DatabaseConnection, User } from "../lib/auth/types";
-// import { listConnections } from "../lib/connections/config.server";
 import { loader as connectionLoader } from "./connections.state";
 import Layout from "~/components/Layout";
+import { UserWithOrganization } from "~/lib/db/schema";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await getUser(request);
@@ -37,7 +36,10 @@ export default function AuthenticatedRoot() {
   const { user, connections, activeConnection } = useLoaderData<LoaderData>();
   
   return (
-    <Layout connections={connections as DatabaseConnection[]} activeConnection={activeConnection as DatabaseConnection | null}>
+    <Layout 
+      user={user as unknown as UserWithOrganization} 
+      connections={connections as unknown as UserWithOrganization['connectionPermissions']} 
+    >
       <Outlet />
     </Layout>
   );

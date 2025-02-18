@@ -4,6 +4,7 @@ import { requireOrganizationRole } from "../lib/auth/session.server";
 import { db } from "../lib/db/db.server";
 import { organizationMemberships } from "../lib/db/schema";
 import { eq } from "drizzle-orm";
+import { cn } from "../lib/utils";
 
 interface LoaderData {
   members: Array<{
@@ -40,81 +41,78 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       role: member.role,
       joinedAt: member.createdAt.toISOString(),
     })),
-    isAdmin: membership.role === "ADMIN" || membership.role === "OWNER",
+    organization: membership.organization,
+    isAdmin: membership.membership.role === "ADMIN" || membership.membership.role === "OWNER",
   };
 }
 
-export default function MembersPage() {
-  const { members, isAdmin } = useLoaderData<LoaderData>();
+export default function OrganizationMembers() {
+  const { organization, members, isAdmin } = useLoaderData<typeof loader>();
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="p-6">
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-            Organization Members
+          <h1 className="text-2xl font-semibold text-foreground">
+            {organization.name} Members
           </h1>
-          <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-            A list of all members in your organization including their name, email, and role.
+          <p className="mt-2 text-sm text-muted-foreground">
+            Manage members and their roles in your organization
           </p>
         </div>
-        {isAdmin && (
-          <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-            <Link
-              to="invite"
-              className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
-            >
-              Invite Member
-            </Link>
-          </div>
-        )}
+        <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
+          <Link
+            to="invite"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            Invite Member
+          </Link>
+        </div>
       </div>
-      <div className="mt-8 flex flex-col">
-        <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+
+      <div className="mt-8 flow-root">
+        <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+          <div className="inline-block min-w-full py-2 align-middle">
+            <div className="overflow-hidden shadow-sm ring-1 ring-border rounded-lg">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted">
                   <tr>
-                    <th
-                      scope="col"
-                      className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6"
-                    >
+                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-medium text-muted-foreground sm:pl-6">
                       Name
                     </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white"
-                    >
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-medium text-muted-foreground">
                       Email
                     </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white"
-                    >
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-medium text-muted-foreground">
                       Role
                     </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white"
-                    >
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-medium text-muted-foreground">
                       Joined
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
+                <tbody className="divide-y divide-border bg-card">
                   {members.map((member) => (
-                    <tr key={member.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-6">
+                    <tr key={member.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6">
                         {member.name}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
                         {member.email}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {member.role}
+                      <td className="whitespace-nowrap px-3 py-4 text-sm">
+                        <span className={cn(
+                          "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset",
+                          member.role === "OWNER" 
+                            ? "bg-primary/10 text-primary ring-primary/30"
+                            : member.role === "ADMIN"
+                            ? "bg-blue-50 text-blue-700 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/30"
+                            : "bg-muted text-muted-foreground ring-border"
+                        )}>
+                          {member.role}
+                        </span>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
                         {new Date(member.joinedAt).toLocaleDateString()}
                       </td>
                     </tr>

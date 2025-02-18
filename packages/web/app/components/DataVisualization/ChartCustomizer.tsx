@@ -47,7 +47,7 @@ export function ChartCustomizer({ chartData, onUpdate }: ChartCustomizerProps) {
               onClick={() => handleChartTypeChange(option.value)}
               className={`px-3 py-1 rounded-md text-sm ${
                 chartType === option.value
-                  ? 'bg-primary text-white'
+                  ? 'bg-current text-white'
                   : 'bg-light-bg-tertiary dark:bg-dark-bg-tertiary text-light-text-primary dark:text-dark-text-primary'
               }`}
             >

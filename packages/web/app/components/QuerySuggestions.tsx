@@ -2,8 +2,10 @@ import { useEffect, useRef } from 'react';
 import type { TableNode, RelationshipEdge } from '../types/schema';
 import pg from 'pg';
 import { useQuerySuggestions } from '../hooks/useQuerySuggestions';
-import { Button } from '../components/Button';
+import { Button } from '../components/ui/button';
 import { cn } from '../utils/cn';
+import { EmptyState } from '../components/EmptyState';
+import { SearchIcon } from 'lucide-react';
 
 interface QuerySuggestionsProps {
   pool: pg.Pool;
@@ -47,79 +49,83 @@ export function QuerySuggestions({
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Input field with loading state */}
+      {/* Search input */}
       <div className="relative">
         <input
           ref={inputRef}
           type="text"
           value={userInput}
           onChange={(e) => handleInputChange(e.target.value)}
-          placeholder={
-            isInitialized
-              ? 'Describe the query you want to run...'
-              : 'Initializing query suggestions...'
-          }
-          disabled={!isInitialized}
+          placeholder="Search for a query suggestion..."
           className={cn(
-            'w-full px-4 py-2 text-sm bg-light-bg-secondary dark:bg-dark-bg-secondary',
-            'text-light-text-primary dark:text-dark-text-primary',
-            'border border-light-border dark:border-dark-border rounded-md',
-            'focus:outline-none focus:ring-2 focus:ring-primary-500',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
+            'w-full px-4 py-2 text-sm',
+            'bg-background text-foreground',
+            'border border-border rounded-md',
+            'focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring',
+            'placeholder:text-muted-foreground'
           )}
         />
         {isLoading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-500 border-t-transparent" />
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
           </div>
         )}
       </div>
 
-      {/* Error message */}
+      {/* Error state */}
       {error && (
-        <div className="text-sm text-red-500 dark:text-red-400">
+        <div className="text-sm text-destructive">
           {error}
         </div>
       )}
 
-      {/* Suggestions list */}
+      {/* Results */}
       {suggestions.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">
-            Suggestions
+          <h3 className="text-sm font-medium text-muted-foreground">
+            Suggested Queries
           </h3>
           <div className="space-y-2">
             {suggestions.map((suggestion, index) => (
-              <div
+              <button
                 key={index}
-                className={cn(
-                  'p-3 rounded-md',
-                  'bg-light-bg-secondary dark:bg-dark-bg-secondary',
-                  'border border-light-border dark:border-dark-border',
-                  'hover:border-primary-500 dark:hover:border-primary-500',
-                  'cursor-pointer transition-colors'
-                )}
                 onClick={() => handleSuggestionSelect(suggestion.sql)}
+                className={cn(
+                  'w-full p-4 text-left rounded-lg',
+                  'bg-card hover:bg-muted',
+                  'border border-border',
+                  'transition-colors duration-200'
+                )}
               >
-                <div className="text-sm text-light-text-primary dark:text-dark-text-primary">
+                <div className="text-sm text-foreground">
                   {suggestion.text}
                 </div>
-                <div className="mt-1 text-xs font-mono text-light-text-secondary dark:text-dark-text-secondary">
+                <div className="mt-1 text-xs font-mono text-muted-foreground">
                   {suggestion.sql}
                 </div>
-                <div className="mt-1 text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
+                <div className="mt-1 text-xs text-muted-foreground/60">
                   Confidence: {Math.round(suggestion.confidence * 100)}%
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
       )}
 
+      {/* Empty state */}
+      {!isLoading && suggestions.length === 0 && userInput && (
+        <EmptyState
+          icon={SearchIcon}
+          title="No suggestions found"
+          description="Try a different search term"
+          className="w-full"
+        />
+      )}
+
       {/* Generate full query button */}
       {userInput.trim() && !isLoading && (
         <Button
-          variant="primary"
+          variant="default"
           size="sm"
           onClick={async () => {
             const query = await generateFullQuery();

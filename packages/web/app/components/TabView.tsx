@@ -8,7 +8,10 @@ interface Tab {
 }
 
 interface TabViewProps {
-  tabs: Tab[];
+  tabs: Array<{
+    id: string;
+    label: string;
+  }>;
   activeTab: string;
   onTabChange: (tabId: string) => void;
 }
@@ -28,7 +31,7 @@ interface DataViewProps {
 
 export function TabView({ tabs, activeTab, onTabChange }: TabViewProps) {
   return (
-    <div className="bg-light-bg-primary dark:bg-dark-bg-secondary px-6">
+    <div className="bg-background border-b border-border">
       <div className="flex">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -36,11 +39,12 @@ export function TabView({ tabs, activeTab, onTabChange }: TabViewProps) {
             <Button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
+              variant="ghost"
               className={cn(
-                "px-6 py-3 text-sm font-medium border-b-2",
+                "px-6 py-3 text-sm font-medium border-b-2 rounded-none",
                 isActive
-                  ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                  : "border-transparent text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary hover:border-light-border dark:hover:text-dark-text-primary dark:hover:border-dark-border"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               )}
             >
               {tab.label}
@@ -67,14 +71,14 @@ export function DataView({
   return (
     <div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-800">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column}
                   scope="col"
-                  className="group px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
+                  className="group px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer"
                   onClick={() => onSort(column)}
                 >
                   <div className="flex items-center space-x-1">
@@ -91,13 +95,13 @@ export function DataView({
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+          <tbody className="bg-card divide-y divide-border">
             {rows.map((row, rowIndex) => (
-              <tr key={rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+              <tr key={rowIndex} className="hover:bg-muted/50 transition-colors">
                 {columns.map((column) => (
                   <td
                     key={column}
-                    className="px-6 py-4 whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-300 font-mono"
+                    className="px-6 py-4 whitespace-pre-wrap text-sm text-foreground font-mono"
                   >
                     {formatCellValue(row[column])}
                   </td>

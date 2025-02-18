@@ -177,15 +177,6 @@ export interface AuthenticatedWebSocket extends WebSocket {
   channels: Set<string>;
 }
 
-// User with organization
-export interface UserWithOrganization extends User {
-  organizationMemberships: OrganizationMembership[];
-  currentOrganization?: Organization;
-  id: string;
-  email: string;
-  name: string;
-}
-
 // Query restriction
 export interface QueryRestriction {
   maxRowsPerQuery?: number;

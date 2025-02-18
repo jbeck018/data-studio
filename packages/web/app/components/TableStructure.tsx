@@ -41,7 +41,7 @@ export function TableStructure({ table, onSave }: TableStructureProps) {
 
       <div>
         <h3 className="text-sm font-medium text-gray-500 mb-3">Columns</h3>
-        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg overflow-hidden">
+        <div className="bg-current shadow-sm ring-1 ring-gray-900/5 rounded-lg overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -62,7 +62,7 @@ export function TableStructure({ table, onSave }: TableStructureProps) {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-current divide-y divide-gray-200">
               {table.columns.map((column) => (
                 <tr key={column.name}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">

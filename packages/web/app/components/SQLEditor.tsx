@@ -6,9 +6,11 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView, type ViewUpdate } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useTheme } from '../hooks/useTheme';
 import type { TableSchema } from '../types';
 import { Button } from './ui/button';
+import { Theme, useTheme } from 'remix-themes';
+import { cn } from '../lib/utils';
+import { PlayIcon } from 'lucide-react';
 
 interface SQLEditorProps {
   defaultValue?: string;
@@ -22,6 +24,7 @@ interface SQLEditorProps {
   height?: string | number;
   placeholder?: string;
   onError?: (error: string | null) => void;
+  className?: string;
 }
 
 // SQL Keywords for auto-completion
@@ -192,8 +195,10 @@ export function SQLEditor({
   onError,
   height = '200px',
   placeholder,
+  className,
 }: SQLEditorProps) {
-  const { isDark } = useTheme();
+  const [theme] = useTheme();
+  const isDark = theme === Theme.DARK;
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView>();
   const sqlLinter = useMemo(() => createSQLLinter((error: string | null) => {

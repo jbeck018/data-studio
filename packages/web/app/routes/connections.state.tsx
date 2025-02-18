@@ -22,6 +22,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   // Get all available connections
   const connections = await db.query.databaseConnections.findMany({
+    where: eq(databaseConnections.organizationId, user?.currentOrganization?.id || ''),
     orderBy: (connections, { desc }) => [desc(connections.updatedAt)],
   });
 

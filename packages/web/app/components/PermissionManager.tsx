@@ -46,7 +46,7 @@ export function PermissionManager({ connectionId, users, currentPermissions }: P
   };
 
   return (
-    <div className="space-y-6 p-4 bg-white rounded-lg shadow">
+    <div className="space-y-6 p-4 bg-current rounded-lg shadow">
       <h2 className="text-2xl font-semibold">Manage Connection Permissions</h2>
       
       {/* Current Permissions Table */}
@@ -73,7 +73,7 @@ export function PermissionManager({ connectionId, users, currentPermissions }: P
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-current divide-y divide-gray-200">
               {currentPermissions.map((permission) => (
                 <tr key={permission.userId}>
                   <td className="px-6 py-4 whitespace-nowrap">

@@ -13,7 +13,7 @@ export function LoadingSpinner({ size = 'md', className = '' }: LoadingSpinnerPr
   return (
     <div role="status" className={className}>
       <svg
-        className={`${sizeClasses[size]} animate-spin text-light-border dark:text-dark-border fill-primary-600`}
+        className={`${sizeClasses[size]} animate-spin text-muted fill-primary`}
         viewBox="0 0 100 101"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"

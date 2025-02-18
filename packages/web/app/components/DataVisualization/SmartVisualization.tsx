@@ -218,7 +218,7 @@ export function SmartVisualization({ queryResult, onInsightFound }: SmartVisuali
   return (
     <div className="space-y-8">
       {insights.map((insight, index) => (
-        <div key={index} className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <div key={index} className="bg-current dark:bg-gray-800 shadow rounded-lg p-6">
           <div className="mb-4">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">
               {insight.type.charAt(0).toUpperCase() + insight.type.slice(1)} Insight

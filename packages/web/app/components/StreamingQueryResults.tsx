@@ -49,7 +49,7 @@ export function StreamingQueryResults({ result: initialResult }: StreamingQueryR
   return (
     <div className="h-full w-full">
       <div className="flex-1 overflow-auto">
-        <div className="bg-white shadow-sm">
+        <div className="bg-current shadow-sm">
           <div className="p-4 border-b">
             <div className="text-sm text-gray-500">
               {result.rowCount.toLocaleString()} rows in set ({result.metrics.executionTimeMs.toFixed(2)}ms)

@@ -66,6 +66,7 @@ export interface UserWithOrganization extends User {
 	organizationMemberships?: OrganizationMembership[];
 	currentOrganization?: Organization;
 	organization?: Organization;
+	connectionPermissions?: ConnectionPermission[];
 }
 
 export interface Permission {

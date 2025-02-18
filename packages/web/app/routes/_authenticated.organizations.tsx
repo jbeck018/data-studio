@@ -10,7 +10,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export default function OrganizationsLayout() {
   return (
-    <div className="min-h-screen bg-light-bg-primary dark:bg-dark-bg-primary">
+    <div className="min-h-screen bg-light-bg-current dark:bg-dark-bg-current">
       <Outlet />
     </div>
   );

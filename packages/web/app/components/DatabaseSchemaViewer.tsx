@@ -28,7 +28,7 @@ function TableStructure({ table }: TableStructureProps) {
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-current divide-y divide-gray-200">
             {table.columns.map((column) => (
               <tr key={column.name}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">

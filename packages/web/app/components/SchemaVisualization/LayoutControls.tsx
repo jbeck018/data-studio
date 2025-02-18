@@ -1,4 +1,4 @@
-import { Button } from '../../components/Button';
+import { Button } from '../ui/button';
 
 interface LayoutControlsProps {
   selectedLayout: string;
@@ -12,7 +12,7 @@ export function LayoutControls({
   onReset,
 }: LayoutControlsProps) {
   return (
-    <div className="absolute top-4 right-4 z-10 flex items-center space-x-2 bg-light-bg-primary dark:bg-dark-bg-primary rounded-lg shadow-lg p-2">
+    <div className="absolute top-4 right-4 z-10 flex items-center space-x-2 bg-light-bg-current dark:bg-dark-bg-current rounded-lg shadow-lg p-2">
       <select
         value={selectedLayout}
         onChange={(e) => onLayoutChange(e.target.value)}

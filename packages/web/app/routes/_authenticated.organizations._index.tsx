@@ -15,10 +15,10 @@ export default function OrganizationsPage() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Organizations</h1>
+        <h1 className="text-2xl font-semibold text-foreground">Organizations</h1>
         <Link
           to="new"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
+          className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
         >
           Create Organization
         </Link>
@@ -29,10 +29,10 @@ export default function OrganizationsPage() {
           <Link
             key={organization.id}
             to={organization.id}
-            className="block p-6 bg-light-bg-secondary dark:bg-dark-bg-tertiary rounded-lg hover:bg-light-bg-tertiary dark:hover:bg-dark-bg-secondary transition-colors"
+            className="block p-6 bg-card hover:bg-muted rounded-lg transition-colors"
           >
-            <h2 className="text-lg font-medium mb-2">{organization.name}</h2>
-            <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
+            <h2 className="text-lg font-medium text-foreground mb-2">{organization.name}</h2>
+            <p className="text-sm text-muted-foreground">
               Created {new Date(organization.createdAt).toLocaleDateString()}
             </p>
           </Link>
@@ -40,13 +40,13 @@ export default function OrganizationsPage() {
 
         {organizations.length === 0 && (
           <div className="col-span-full text-center py-12">
-            <h3 className="text-lg font-medium mb-2">No organizations yet</h3>
-            <p className="text-light-text-secondary dark:text-dark-text-secondary mb-4">
+            <h3 className="text-lg font-medium text-foreground mb-2">No organizations yet</h3>
+            <p className="text-muted-foreground mb-4">
               Create your first organization to get started
             </p>
             <Link
               to="new"
-              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               Create Organization
             </Link>

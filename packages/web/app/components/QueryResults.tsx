@@ -33,7 +33,7 @@ export function QueryResults({ result, isLoading }: QueryResultsProps) {
   return (
     <div className="flex h-full">
       <div className="flex-1 overflow-auto">
-        <div className="bg-white shadow-sm">
+        <div className="bg-current shadow-sm">
           <div className="p-4 border-b">
             {result.metrics && (
               <div className="text-sm text-gray-500">
@@ -64,7 +64,7 @@ export function QueryResults({ result, isLoading }: QueryResultsProps) {
                   ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-current divide-y divide-gray-200">
                 {result.rows.map((row, rowIndex) => (
                   <tr
                     key={rowIndex}

@@ -3,6 +3,7 @@
         "Customizer",
         "headlessui",
         "Keymap",
+        "Millis",
         "relname",
         "reltuples",
         "timestamptz",

@@ -253,7 +253,7 @@ export function VisualizationManager({ queryResult, queryId }: VisualizationMana
               onClick={() => handleChartSelect(chartData)}
               className={`p-4 rounded-lg border transition-colors ${
                 selectedChart === chartData
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  ? 'border-primary-500 bg-current-50 dark:bg-current-900/20'
                   : 'border-light-border dark:border-dark-border hover:bg-light-bg-secondary dark:hover:bg-dark-bg-secondary'
               }`}
             >
@@ -277,7 +277,7 @@ export function VisualizationManager({ queryResult, queryId }: VisualizationMana
           {selectedChart && (
             <Button
               onClick={() => setShowSaveModal(true)}
-              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md transition-colors"
+              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-current-600 hover:bg-current-700 rounded-md transition-colors"
             >
               Save Chart
             </Button>

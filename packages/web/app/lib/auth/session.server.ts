@@ -1,9 +1,9 @@
 import { createCookieSessionStorage, redirect } from "react-router";
+import { createThemeSessionResolver } from "remix-themes";
 import { db } from "~/lib/db/db.server";
 import { eq } from "drizzle-orm";
-import type { UserWithOrganization } from "~/lib/db/schema/types";
 import { getUserById } from "./auth.server";
-import { organizations } from "../db/schema";
+import { organizations, UserWithOrganization } from "../db/schema";
 
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) {
@@ -21,6 +21,20 @@ const storage = createCookieSessionStorage({
     httpOnly: true,
   },
 });
+
+const sessionStorage = createCookieSessionStorage({
+  cookie: {
+    name: "__remix-themes",
+    // domain: 'remix.run',
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secrets: ["s3cr3t"],
+    // secure: true,
+  },
+});
+
+export const themeSessionResolver = createThemeSessionResolver(sessionStorage);
 
 export async function createUserSession(
   userId: string,
@@ -112,7 +126,7 @@ export const requireOrganizationRole = async (request: Request, organizationId: 
     (m) => m.organizationId === organizationId
   );
   if (!membership) throw redirect("/organizations");
-  return membership;
+  return { membership, organization: user.organization, user };
 };
 
 export const requireOrganization = requireOrganizationRole;

@@ -5,11 +5,14 @@
   "description": "Database management studio with introspection capabilities",
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter web dev",
-    "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
-    "test": "pnpm -r test"
+    "start:web": "bun --filter web-app dev",
+    "build:web": "bun --filter web-app build",
+    "lint:web": "bun --filter web-app lint",
+    "test:web": "bun --filter web-app test"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "keywords": [
     "database",
     "management",
@@ -20,10 +23,5 @@
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
-  },
-  "dependencies": {
-    "@types/recharts": "^1.8.29",
-    "recharts": "^2.13.3",
-    "redis": "^4.7.0"
   }
 }

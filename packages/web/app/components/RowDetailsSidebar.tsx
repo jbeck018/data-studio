@@ -1,4 +1,6 @@
 import { Column } from "~/types/schema";
+import { cn } from "~/lib/utils";
+import { XIcon } from "lucide-react";
 
 interface RowDetailsSidebarProps {
   row: Record<string, any> | null;
@@ -20,53 +22,48 @@ export function RowDetailsSidebar({
 
   return (
     <div
-      className={`fixed inset-y-0 right-0 w-96 bg-white dark:bg-gray-900 shadow-xl transform transition-transform duration-300 ease-in-out ${
-        isOpen ? 'translate-x-0' : 'translate-x-full'
-      }`}
+      className={cn(
+        "fixed inset-y-0 right-0 w-96 bg-background border-l border-border shadow-lg transform transition-transform duration-200 ease-in-out",
+        isOpen ? "translate-x-0" : "translate-x-full"
+      )}
     >
       <div className="h-full flex flex-col">
-        <div className="flex-none p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Row Details
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              aria-label="Close panel"
-            >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">Row Details</h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-md hover:bg-muted transition-colors"
+          >
+            <XIcon className="h-5 w-5 text-muted-foreground" />
+          </button>
         </div>
+
         <div className="flex-1 overflow-y-auto p-4">
           <dl className="space-y-4">
             {columns.map(column => (
               <div 
                 key={column.name} 
-                className="bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors"
+                className="bg-card px-4 py-3 rounded-lg hover:bg-muted transition-colors"
               >
                 <dt className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <span className="text-sm font-medium text-muted-foreground">
                     {column.name}
                   </span>
-                  <span className="text-xs px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                  <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
                     {column.type}
                   </span>
                 </dt>
                 <dd className="mt-2">
-                  <div className="text-sm text-gray-900 dark:text-gray-100 break-words">
+                  <div className="text-sm text-foreground break-words">
                     {formatCellValue(row[column.name])}
                   </div>
                   {column.nullable && (
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mt-1 text-xs text-muted-foreground">
                       Nullable
                     </div>
                   )}
                   {column.defaultValue !== undefined && (
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mt-1 text-xs text-muted-foreground">
                       Default: {formatCellValue(column.defaultValue)}
                     </div>
                   )}

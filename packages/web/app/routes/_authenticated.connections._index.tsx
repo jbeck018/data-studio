@@ -2,6 +2,8 @@ import { type LoaderFunctionArgs } from "react-router";
 import { Link, useLoaderData } from "react-router";
 import { requireUser } from "../lib/auth/session.server";
 import { listConnections } from "../lib/connections/config.server";
+import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
@@ -18,47 +20,49 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return { connections: connectionsWithStatus };
 }
 
-export default function ConnectionsIndexPage() {
+export default function ConnectionsIndex() {
   const { connections } = useLoaderData<typeof loader>();
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
-          <h1 className="text-base font-semibold leading-6 text-gray-900 dark:text-white">Database Connections</h1>
-          <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-            A list of all database connections in your organization.
+          <h1 className="text-base font-semibold leading-6 text-foreground">
+            Database Connections
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            A list of all your database connections and their current status.
           </p>
         </div>
         <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
           <Link
             to="new"
-            className="block rounded-md bg-blue-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            Add connection
+            Add Connection
           </Link>
         </div>
       </div>
       <div className="mt-8 flow-root">
         <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+            <div className="overflow-hidden shadow ring-1 ring-border sm:rounded-lg">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted">
                   <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6">
+                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-foreground sm:pl-6">
                       Name
                     </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                      Type
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
                       Host
                     </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
+                      Port
+                    </th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
                       Database
                     </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-foreground">
                       Status
                     </th>
                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
@@ -66,33 +70,35 @@ export default function ConnectionsIndexPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
+                <tbody className="divide-y divide-border bg-card">
                   {connections.map((connection) => (
                     <tr key={connection.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-6">
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6">
                         {connection.name}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {connection.type}
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
+                        {connection.host}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {connection.host}:{connection.port}
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
+                        {connection.port}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
                         {connection.database}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                          connection.status === 'connected' ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10' :
-                          'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-500/10'
-                        }`}>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-muted-foreground">
+                        <span className={cn(
+                          "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium",
+                          connection.status === "connected" 
+                            ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"
+                            : "bg-destructive/10 text-destructive ring-1 ring-inset ring-destructive/20"
+                        )}>
                           {connection.status}
                         </span>
                       </td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                         <Link
                           to={`${connection.id}/edit`}
-                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                          className="text-primary hover:text-primary/80"
                         >
                           Edit<span className="sr-only">, {connection.name}</span>
                         </Link>
@@ -101,8 +107,8 @@ export default function ConnectionsIndexPage() {
                   ))}
                   {connections.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                        No connections found. <Link to="new" className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">Add one now</Link>.
+                      <td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                        No connections found. <Link to="new" className="text-primary hover:text-primary/80">Add one now</Link>.
                       </td>
                     </tr>
                   )}

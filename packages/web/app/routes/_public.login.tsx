@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs } from "react-router";
-import { Form, Link, useActionData } from "react-router";
+import { Form, Link, useActionData, useSearchParams, redirect } from "react-router";
 import { createUserSession, login } from "~/lib/auth";
 import { getUser } from "~/lib/auth/session.server";
 import { Button } from "../components/ui/button";
@@ -16,6 +16,12 @@ interface LoginActionData {
 
 export async function loader({ request }: ActionFunctionArgs) {
   const user = await getUser(request);
+  if (user) {
+    if (user.databaseConnections?.length === 0) {
+      return redirect("connections/new");
+    }
+    return redirect("dashboard");
+  }
   return { user };
 }
 
@@ -45,6 +51,8 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export default function Login() {
   const actionData = useActionData<typeof action>();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
 
   return (
     <>
@@ -58,6 +66,7 @@ export default function Login() {
       </div>
 
       <Form method="post" className="space-y-4">
+        <input type="hidden" name="redirectTo" value={redirectTo} />
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input

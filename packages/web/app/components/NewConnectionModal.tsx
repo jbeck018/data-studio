@@ -35,7 +35,7 @@ export default function NewConnectionModal({ isOpen, onClose }: NewConnectionMod
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-light-bg-primary dark:bg-dark-bg-secondary p-6 shadow-xl transition-all">
+              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-light-bg-current dark:bg-dark-bg-secondary p-6 shadow-xl transition-all">
                 <Dialog.Title as="h3" className="text-lg font-medium mb-4">
                   New Database Connection
                 </Dialog.Title>

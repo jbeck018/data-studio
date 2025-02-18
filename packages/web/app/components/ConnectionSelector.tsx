@@ -6,13 +6,20 @@ import { Badge } from "./ui/badge";
 
 interface ConnectionSelectorProps {
   connections: DatabaseConnection[];
-  activeConnectionId?: string | null;
   onConnectionChange: (connectionId: string) => void;
+  activeConnectionId: string | null;
 }
 
-export function ConnectionSelector({ connections, activeConnectionId, onConnectionChange }: ConnectionSelectorProps) {
+export function ConnectionSelector({ connections, onConnectionChange, activeConnectionId }: ConnectionSelectorProps) {
   const submit = useSubmit();
   const [connectionStatuses, setConnectionStatuses] = useState<Record<string, string>>({});
+
+  // Auto-select single connection
+  useEffect(() => {
+    if (connections.length === 1 && !activeConnectionId) {
+      handleConnectionChange(connections[0].id);
+    }
+  }, [connections, activeConnectionId]);
 
   useEffect(() => {
     // Fetch connection statuses
@@ -35,11 +42,11 @@ export function ConnectionSelector({ connections, activeConnectionId, onConnecti
     const interval = setInterval(fetchStatuses, 30000);
     return () => clearInterval(interval);
   }, [connections]);
-
+ 
   const handleConnectionChange = (value: string) => {
     const formData = new FormData();
     formData.append("connectionId", value);
-    submit(formData, { method: "post", action: "/connections/change" });
+    console.log(connections.find((c) => c.id === value) as unknown as DatabaseConnection);
     onConnectionChange(value);
   };
 
